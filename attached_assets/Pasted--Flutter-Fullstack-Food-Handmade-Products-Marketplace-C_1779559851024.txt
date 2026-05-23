@@ -1,0 +1,1297 @@
+# Flutter Fullstack Food & Handmade Products Marketplace - Complete Specification
+
+## Project Overview
+Build a fullstack Flutter mobile application for buying and selling homemade food items (pickles, chawal badi, roohafza, etc.) and handmade products (woolen clothes, keychains, etc.). The platform supports dual marketplace models: traditional e-commerce orders and WhatsApp-based ordering with seller profiles.
+
+---
+
+## 1. TECH STACK & SETUP
+
+### Frontend
+- **Framework**: Flutter (latest stable)
+- **Language**: Dart
+- **State Management**: Riverpod 2.4+
+- **UI Components**: Flutter Material 3 + Custom widgets
+- **Authentication**: Google Sign-In + Firebase Auth
+- **Local Storage**: Hive (encrypted)
+- **API Client**: Dio with interceptors
+- **Image Handling**: Cached Image Networks + Image Picker
+- **Theme Management**: Provider + custom theme configuration
+- **Animations**: Built-in Flutter + Lottie
+
+### Backend
+- **Runtime**: Node.js (Express.js 4.18+)
+- **Language**: TypeScript
+- **Database**: MongoDB 6.0+ (for flexibility)
+- **Cache**: Redis (optional, for performance)
+- **Authentication**: Firebase Admin SDK + JWT tokens
+- **File Storage**: Firebase Cloud Storage or AWS S3
+- **APIs**: RESTful JSON
+- **Validation**: Zod schemas
+- **WhatsApp Integration**: Twilio WhatsApp API / WhatsApp Business API
+
+### Infrastructure
+- **Hosting**: Firebase Functions or DigitalOcean/AWS (Express backend)
+- **Database Hosting**: MongoDB Atlas (free tier available)
+- **CI/CD**: GitHub Actions
+- **Version Control**: Git + GitHub
+
+---
+
+## 2. PROJECT DIRECTORY STRUCTURE
+
+```
+food_marketplace/
+├── flutter_app/
+│   ├── lib/
+│   │   ├── main.dart
+│   │   ├── config/
+│   │   │   ├── theme/
+│   │   │   │   ├── app_theme.dart          (dark theme config)
+│   │   │   │   ├── glass_morphism.dart     (glassmorphism widgets)
+│   │   │   │   └── color_scheme.dart
+│   │   │   ├── constants/
+│   │   │   │   ├── api_constants.dart
+│   │   │   │   ├── app_strings.dart
+│   │   │   │   └── validation_rules.dart
+│   │   │   └── routes/
+│   │   │       └── app_routes.dart
+│   │   ├── models/
+│   │   │   ├── user/
+│   │   │   │   ├── user_model.dart
+│   │   │   │   ├── user_profile.dart
+│   │   │   │   └── seller_info.dart
+│   │   │   ├── product/
+│   │   │   │   ├── product_model.dart
+│   │   │   │   ├── category_enum.dart
+│   │   │   │   └── product_filter.dart
+│   │   │   ├── order/
+│   │   │   │   ├── order_model.dart
+│   │   │   │   ├── order_status_enum.dart
+│   │   │   │   └── order_history.dart
+│   │   │   └── cart/
+│   │   │       └── cart_item_model.dart
+│   │   ├── services/
+│   │   │   ├── auth_service.dart           (Google Auth + Firebase)
+│   │   │   ├── api_service.dart            (Dio HTTP client)
+│   │   │   ├── storage_service.dart        (Hive local storage)
+│   │   │   ├── firebase_service.dart
+│   │   │   └── whatsapp_service.dart       (WhatsApp message generation)
+│   │   ├── providers/
+│   │   │   ├── auth_provider.dart
+│   │   │   ├── user_provider.dart
+│   │   │   ├── product_provider.dart
+│   │   │   ├── cart_provider.dart
+│   │   │   ├── order_provider.dart
+│   │   │   ├── seller_dashboard_provider.dart
+│   │   │   └── theme_provider.dart         (dark/light theme + customization)
+│   │   ├── screens/
+│   │   │   ├── auth/
+│   │   │   │   ├── login_screen.dart       (Google Sign-In)
+│   │   │   │   └── seller_setup_screen.dart (name, address, phone, approval)
+│   │   │   ├── buyer/
+│   │   │   │   ├── home_screen.dart        (product list with filters)
+│   │   │   │   ├── product_detail_screen.dart
+│   │   │   │   ├── cart_screen.dart
+│   │   │   │   ├── checkout_screen.dart    (order method selection: e-commerce/whatsapp)
+│   │   │   │   ├── order_history_screen.dart
+│   │   │   │   └── account_screen.dart     (profile, saved info, settings)
+│   │   │   ├── seller/
+│   │   │   │   ├── seller_dashboard_screen.dart
+│   │   │   │   ├── add_product_screen.dart
+│   │   │   │   ├── seller_orders_screen.dart
+│   │   │   │   ├── order_detail_screen.dart (mark delivered, order filters)
+│   │   │   │   ├── seller_settings_screen.dart (switch e-commerce/whatsapp mode)
+│   │   │   │   └── seller_history_screen.dart (sales history with filters)
+│   │   │   ├── shared/
+│   │   │   │   ├── settings_screen.dart    (theme, language, notifications)
+│   │   │   │   └── product_search_screen.dart
+│   │   │   └── splash_screen.dart
+│   │   ├── widgets/
+│   │   │   ├── glass_card.dart             (glassmorphism container)
+│   │   │   ├── custom_app_bar.dart
+│   │   │   ├── bottom_nav_bar.dart
+│   │   │   ├── product_card.dart
+│   │   │   ├── category_chip.dart          (switchable categories)
+│   │   │   ├── order_status_badge.dart
+│   │   │   ├── seller_switch_button.dart   (buyer/seller toggle)
+│   │   │   ├── filter_button.dart
+│   │   │   └── loading_indicator.dart      (custom, professional)
+│   │   ├── utils/
+│   │   │   ├── date_formatter.dart
+│   │   │   ├── price_formatter.dart
+│   │   │   ├── validators.dart
+│   │   │   ├── logger.dart
+│   │   │   └── error_handler.dart
+│   │   └── extensions/
+│   │       ├── context_extensions.dart
+│   │       ├── string_extensions.dart
+│   │       └── build_context_extensions.dart
+│   ├── pubspec.yaml
+│   ├── analysis_options.yaml
+│   ├── android/
+│   │   └── app/build.gradle
+│   ├── ios/
+│   │   └── Podfile
+│   └── .env.example
+│
+├── backend/
+│   ├── src/
+│   │   ├── index.ts                        (main entry)
+│   │   ├── middleware/
+│   │   │   ├── auth.middleware.ts
+│   │   │   ├── error.middleware.ts
+│   │   │   └── validation.middleware.ts
+│   │   ├── controllers/
+│   │   │   ├── auth.controller.ts
+│   │   │   ├── user.controller.ts
+│   │   │   ├── product.controller.ts
+│   │   │   ├── order.controller.ts
+│   │   │   └── seller.controller.ts
+│   │   ├── routes/
+│   │   │   ├── auth.routes.ts
+│   │   │   ├── user.routes.ts
+│   │   │   ├── product.routes.ts
+│   │   │   ├── order.routes.ts
+│   │   │   └── seller.routes.ts
+│   │   ├── services/
+│   │   │   ├── auth.service.ts
+│   │   │   ├── user.service.ts
+│   │   │   ├── product.service.ts
+│   │   │   ├── order.service.ts
+│   │   │   ├── seller.service.ts
+│   │   │   ├── whatsapp.service.ts         (WhatsApp message generation)
+│   │   │   └── firebase.service.ts
+│   │   ├── models/
+│   │   │   ├── User.ts
+│   │   │   ├── Product.ts
+│   │   │   ├── Order.ts
+│   │   │   ├── SellerProfile.ts
+│   │   │   └── OrderHistory.ts
+│   │   ├── utils/
+│   │   │   ├── logger.ts
+│   │   │   ├── error.ts
+│   │   │   ├── validators.ts
+│   │   │   └── response.ts
+│   │   ├── config/
+│   │   │   ├── database.ts
+│   │   │   ├── firebase.ts
+│   │   │   └── whatsapp.ts
+│   │   └── types/
+│   │       ├── index.ts
+│   │       └── enums.ts
+│   ├── .env.example
+│   ├── .gitignore
+│   ├── tsconfig.json
+│   ├── package.json
+│   └── nodemon.json
+│
+├── docs/
+│   ├── API_ENDPOINTS.md
+│   ├── SETUP_GUIDE.md
+│   ├── DEPLOYMENT.md
+│   └── DATABASE_SCHEMA.md
+│
+└── README.md
+```
+
+---
+
+## 3. DETAILED FEATURE SPECIFICATIONS
+
+### 3.1 AUTHENTICATION FLOW
+
+#### User Registration
+1. **Login Screen**
+   - Google Sign-In button (Material Design)
+   - Minimal, dark theme by default
+   - Shows "Continue with Google" CTA
+   - Auto-fills email from Google account
+
+2. **Post-Login: User Type Selection**
+   - Button: "I'm a Buyer"
+   - Button: "I'm a Seller (Requires Admin Approval)"
+   - Buyers proceed to Home
+   - Sellers proceed to Setup Screen
+
+3. **Seller Setup Screen** (only for new sellers)
+   - Full Name (required)
+   - Phone Number (required, with validation)
+   - Address (required, multi-line)
+   - Shop Name (optional)
+   - Payment Methods (checkboxes: Razorpay, COD, etc.)
+   - Ordering Mode (radio: E-Commerce or WhatsApp)
+   - WhatsApp Number (required if WhatsApp mode selected)
+   - Submit button
+   - State: "Pending Admin Approval" → wait for admin confirmation
+   - Admin must mark account as "Seller" for access to selling features
+
+#### Token Management
+- Firebase JWT tokens stored in Hive
+- Auto-refresh on token expiration
+- Logout clears local storage
+
+---
+
+### 3.2 BUYER USER FLOW
+
+#### Home Screen (Main Dashboard)
+- **Header**: App logo + Account button (top-right)
+- **Category Filter Bar** (horizontal scrollable chips):
+  - All (default)
+  - Pickles
+  - Chawal Badi
+  - Roohafza
+  - Woolen Clothes
+  - Keychains
+  - Other
+- **Product Grid** (2-column, responsive)
+  - Product image (cached)
+  - Product name
+  - Seller name (small)
+  - Price (bold, prominent)
+  - Category badge
+  - Stock status
+  - Add to cart button (icon-based)
+- **Sorting Options**: Price (low-to-high, high-to-low), Newest, Popular
+- **Search Bar**: Search by product name or seller name
+- **Bottom Navigation**: Home | Cart | Orders | Account
+- **Performance**: Lazy loading, pagination
+
+#### Product Detail Screen
+- Large product image (swipeable if multiple images)
+- Product title, category, seller name
+- Seller profile link (view seller's other products)
+- Price, stock quantity
+- Description (expandable text)
+- Seller address, phone, rating (if implemented)
+- Quantity selector (+ / -)
+- "Add to Cart" button (full-width, prominent)
+- Back navigation
+
+#### Cart Screen
+- List of cart items with:
+  - Product image, name, seller
+  - Price per unit
+  - Quantity adjuster (+ / -)
+  - Remove button
+- Subtotal, taxes (if applicable), total
+- "Proceed to Checkout" button
+- "Continue Shopping" button
+- Empty state if no items
+
+#### Checkout Screen (Order Method Selection)
+**Option 1: E-Commerce Mode**
+- Display items summary
+- Delivery address (pre-filled from account)
+- Address edit link
+- Payment method selection
+- Promo code input
+- "Confirm Order" button
+- Redirects to payment gateway or order confirmation
+
+**Option 2: WhatsApp Mode**
+- Display items summary
+- WhatsApp message preview (read-only)
+- Message format:
+  ```
+  Hello, I would like to place an order:
+  
+  Items:
+  - Product 1 (Qty: 2) - ₹XXX
+  - Product 2 (Qty: 1) - ₹XXX
+  
+  Total: ₹XXX
+  
+  Delivery Address:
+  [User's full address]
+  
+  Name: [User name]
+  Phone: [User phone]
+  ```
+- "Send via WhatsApp" button → opens WhatsApp with pre-filled message
+- Redirects to seller's WhatsApp
+- "Cancel Order" link
+
+#### Order History Screen
+- Tabs: Active | Completed | Cancelled
+- List of past orders:
+  - Order ID
+  - Items (product names, quantities)
+  - Total price
+  - Order date & time
+  - Order status
+  - Delivery date (if completed)
+  - Seller name
+- Tap order → Order Detail Screen
+
+#### Order Detail Screen
+- Order ID, date, time
+- Items list with prices
+- Status timeline (Placed → Confirmed → Shipped → Delivered)
+- Seller contact info (name, phone, address)
+- Delivery address
+- Total price breakdown
+- Action buttons (based on status):
+  - If active: "Contact Seller" (opens WhatsApp if available)
+  - If delivered: "Reorder"
+  - All: "Cancel Order" (if applicable)
+
+#### Account Screen
+- Profile section:
+  - User name
+  - Email
+  - Phone
+  - Address (edit button)
+  - Profile picture (optional)
+- Quick actions:
+  - Edit Profile button
+  - Switch to Seller (if seller-approved)
+  - Settings button
+  - Logout button
+- Account statistics (optional):
+  - Total orders
+  - Total spent
+  - Member since
+
+#### Settings Screen
+- **Theme Settings**:
+  - Dark mode (default)
+  - Light mode
+  - Auto (system preference)
+- **Accent Color Selection** (8 color options):
+  - Blue (default)
+  - Green
+  - Purple
+  - Orange
+  - Red
+  - Pink
+  - Cyan
+  - Amber
+- **Notification Settings**: Toggle push notifications
+- **Language**: English, Hindi, Punjabi
+- **About**: App version, terms, privacy policy
+- **Clear Cache button**
+
+---
+
+### 3.3 SELLER USER FLOW
+
+#### Seller Dashboard
+- **Header**: Shop name + Settings button
+- **Tabs/Options**:
+  1. Products
+  2. Orders
+  3. Sales History
+- **Products Tab**:
+  - Grid/List of seller's products
+  - Edit/Delete options for each
+  - "+ Add Product" button (floating action button)
+  - Stock warning indicators
+
+#### Add/Edit Product Screen
+- Product name (required)
+- Category dropdown (required)
+- Price (required, numeric)
+- Stock quantity (required, numeric)
+- Description (required, multi-line)
+- Product images (allow multiple, drag-to-reorder)
+- Unit type (kg, pcs, bottles, etc.)
+- Tags (optional)
+- "Save Product" button
+- Form validation with error messages
+
+#### Seller Orders Screen
+- **Order Mode Display** (top): "E-Commerce Mode" or "WhatsApp Mode"
+- **Filter Options** (collapsible):
+  - By status: All, Pending, Confirmed, Shipped, Delivered, Cancelled
+  - By date range (from-to)
+  - By customer name
+  - By price range
+  - By payment status (if e-commerce)
+- **Order List**:
+  - Order ID
+  - Customer name
+  - Total items / Total price
+  - Order date
+  - Current status (with status badge)
+  - Action button (view details)
+- **Sorting**: Newest, Oldest, By status
+
+#### Order Detail Screen (Seller View)
+**For E-Commerce Orders:**
+- Order ID, date, time, status
+- Customer info: name, phone, address, email
+- Items list:
+  - Product name, quantity, unit price, subtotal
+- Payment info:
+  - Method
+  - Amount
+  - Status
+- Status update dropdown:
+  - Pending → Confirmed → Shipped → Delivered → Completed
+  - Option to add tracking number
+  - Option to add delivery notes
+  - "Mark as Delivered" button (updates order status)
+  - "Cancel Order" button (with reason)
+- Contact customer button (opens WhatsApp)
+
+**For WhatsApp Orders:**
+- Customer info: name, phone, address
+- Items list with details
+- Message preview (original customer message)
+- Status tracker (manual: Pending, Processing, Ready, Picked Up/Delivered)
+- Status update dropdown
+- Contact customer button (open WhatsApp)
+- Manual notes field
+
+#### Sales History Screen
+- **Filter Options**:
+  - By date range
+  - By category
+  - By status (delivered, cancelled, pending)
+- **Table/List View**:
+  - Date, Product name, Quantity sold, Price per unit, Total, Status
+- **Statistics Card**:
+  - Total sales (period)
+  - Total orders (period)
+  - Average order value
+  - Most sold product
+- **Export button** (CSV, optional)
+
+#### Seller Settings Screen
+- **Shop Info**: Name, phone, address (editable)
+- **Order Mode Selection**:
+  - Radio button: E-Commerce (traditional orders)
+  - Radio button: WhatsApp (message-based orders)
+  - Note: "Switch mode? Ensure you handle pending orders first"
+  - Save button
+- **Payment Methods** (if e-commerce):
+  - Razorpay enabled/disabled
+  - COD enabled/disabled
+  - Bank transfer enabled/disabled
+- **WhatsApp Settings** (if WhatsApp mode):
+  - WhatsApp number (editable)
+  - Message template preview
+  - Test message button
+- **Notifications**: Email/SMS alerts for new orders
+- **Delete Shop** (dangerous action, requires confirmation)
+
+#### Buyer/Seller Toggle
+- In account screen, if user is seller-approved:
+  - "Switch to Seller Mode" button
+  - Toggles between buyer and seller interfaces
+- Bottom navigation changes based on role
+
+---
+
+## 4. UI/UX DESIGN SPECIFICATIONS
+
+### 4.1 Visual Design
+
+#### Color Scheme (Dark Theme Primary)
+```
+Primary Background: #121212 (OLED black)
+Secondary Background: #1E1E1E
+Surface: #2A2A2A
+Surface Variant: #3A3A3A
+On Background: #FFFFFF
+On Surface: #E0E0E0
+Primary Color: #2196F3 (customizable via settings)
+Primary Container: #1565C0
+Outline: #424242
+Error: #CF6679
+Success: #4CAF50
+Warning: #FFA726
+```
+
+#### Typography
+- **Headlines**: Roboto Bold, 28-32px
+- **Titles**: Roboto Bold, 18-24px
+- **Subtitles**: Roboto Regular, 16px
+- **Body**: Roboto Regular, 14px
+- **Captions**: Roboto Regular, 12px
+- **Buttons**: Roboto Medium, 14-16px
+
+#### Glassmorphism Elements
+- Backdrop blur: 10-15px
+- Glass opacity: 85%
+- Border radius: 20px
+- Subtle border: 1px, rgba(255,255,255,0.2)
+- Shadow: elevation 4-8
+
+#### Spacing
+- 4px grid system
+- Padding (screen): 16px
+- Item spacing: 12px
+- Card margin: 8px
+
+#### Icons
+- Use Material Icons 3.0
+- Size: 24px (standard), 20px (compact)
+- No emojis or decorative elements
+
+#### Buttons
+- **Primary**: Full-width, elevation, rounded corners (16px radius)
+- **Secondary**: Outline, no fill
+- **Tertiary**: Text-only
+- **Disabled**: 50% opacity
+- **Loading state**: Spinner inside button, text hidden
+- **Minimum touch target**: 48x48px
+
+#### Images & Media
+- Product images: 1:1 aspect ratio (lazy load)
+- Profile pictures: circle, 64px-96px
+- Cached image networks (auto-cleanup)
+- Progressive image loading (blur to high-res)
+- Placeholder: subtle skeleton loader
+
+### 4.2 Performance Optimizations
+- Lazy loading for product lists
+- Image caching with 30-day expiry
+- Pagination (20 items per page)
+- Network-aware loading (skip heavy assets on slow connections)
+- Code splitting for different user roles
+- Minimal bundle size, optimized for budget phones
+- Smooth 60fps animations only where necessary
+
+---
+
+## 5. API SPECIFICATION
+
+### Base URL
+```
+Production: https://api.foodmarketplace.com/api/v1
+Development: http://localhost:5000/api/v1
+```
+
+### Authentication Header
+```
+Authorization: Bearer <JWT_TOKEN>
+Content-Type: application/json
+```
+
+### Endpoints Overview
+
+#### Auth Endpoints
+```
+POST   /auth/google-signin         (Google ID token → JWT)
+POST   /auth/refresh-token         (Refresh expired JWT)
+POST   /auth/logout                (Invalidate token)
+GET    /auth/verify                (Check token validity)
+```
+
+#### User Endpoints
+```
+GET    /users/profile              (Get current user profile)
+PUT    /users/profile              (Update user profile)
+GET    /users/address              (Get saved addresses)
+POST   /users/address              (Add new address)
+PUT    /users/address/:id          (Update address)
+DELETE /users/address/:id          (Delete address)
+```
+
+#### Product Endpoints
+```
+GET    /products                   (List all products, filters: category, search, sort, page)
+GET    /products/:id               (Get product details)
+GET    /products/seller/:sellerId  (Get products by seller)
+POST   /products                   (Create product, seller only)
+PUT    /products/:id               (Update product, seller only)
+DELETE /products/:id               (Delete product, seller only)
+```
+
+#### Order Endpoints
+```
+POST   /orders                     (Create order - E-Commerce mode)
+GET    /orders                     (Get user's orders with filters)
+GET    /orders/:id                 (Get order details)
+PUT    /orders/:id/status          (Update order status, seller only)
+PUT    /orders/:id/cancel          (Cancel order)
+GET    /orders/history             (Order history with pagination/filters)
+```
+
+#### Seller Endpoints
+```
+GET    /sellers/dashboard          (Seller dashboard data)
+GET    /sellers/:id                (Get seller profile)
+PUT    /sellers/:id                (Update seller info)
+GET    /sellers/:id/settings       (Get seller settings: mode, payment methods)
+PUT    /sellers/:id/settings       (Update seller settings)
+GET    /sellers/:id/orders         (Get seller's orders with filters)
+GET    /sellers/:id/sales-history  (Sales analytics with filters)
+PUT    /sellers/approve/:id        (Admin endpoint: approve seller)
+```
+
+#### WhatsApp Integration Endpoints
+```
+POST   /whatsapp/send-message      (Send pre-filled message to seller's WhatsApp)
+GET    /whatsapp/message-template  (Get formatted order message)
+```
+
+### Error Response Format
+```json
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid input",
+    "details": {}
+  }
+}
+```
+
+### Success Response Format
+```json
+{
+  "success": true,
+  "data": {},
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 150
+  }
+}
+```
+
+---
+
+## 6. DATABASE SCHEMA (MongoDB)
+
+### Collections
+
+#### users
+```javascript
+{
+  _id: ObjectId,
+  email: String (unique),
+  googleId: String,
+  name: String,
+  phone: String,
+  profilePicture: String (URL),
+  role: String (enum: "buyer", "seller"),
+  sellerApproved: Boolean (default: false),
+  addresses: [{
+    _id: ObjectId,
+    name: String,
+    street: String,
+    city: String,
+    state: String,
+    zipCode: String,
+    phone: String,
+    isDefault: Boolean
+  }],
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+#### sellers
+```javascript
+{
+  _id: ObjectId,
+  userId: ObjectId (ref: users),
+  shopName: String,
+  phone: String,
+  address: String,
+  paymentMethods: [String],
+  orderingMode: String (enum: "ecommerce", "whatsapp"),
+  whatsappNumber: String,
+  rating: Number (0-5),
+  totalOrders: Number,
+  verified: Boolean,
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+#### products
+```javascript
+{
+  _id: ObjectId,
+  sellerId: ObjectId (ref: sellers),
+  name: String,
+  category: String (enum),
+  price: Number,
+  stock: Number,
+  description: String,
+  images: [String] (URLs),
+  unit: String (kg, pcs, bottles, etc.),
+  tags: [String],
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+#### orders
+```javascript
+{
+  _id: ObjectId,
+  orderId: String (unique, human-readable),
+  buyerId: ObjectId (ref: users),
+  items: [{
+    productId: ObjectId,
+    sellerId: ObjectId,
+    name: String,
+    quantity: Number,
+    price: Number,
+    subtotal: Number
+  }],
+  totalPrice: Number,
+  deliveryAddress: {
+    name: String,
+    street: String,
+    city: String,
+    state: String,
+    zipCode: String,
+    phone: String
+  },
+  orderMode: String (enum: "ecommerce", "whatsapp"),
+  status: String (enum: "pending", "confirmed", "shipped", "delivered", "cancelled"),
+  paymentMethod: String,
+  paymentStatus: String (enum: "pending", "completed", "failed"),
+  sellerNotes: String,
+  trackingNumber: String,
+  createdAt: Date,
+  updatedAt: Date,
+  deliveredAt: Date
+}
+```
+
+#### orderHistory
+```javascript
+{
+  _id: ObjectId,
+  orderId: ObjectId (ref: orders),
+  buyerId: ObjectId,
+  sellerId: ObjectId,
+  action: String (created, confirmed, shipped, delivered, cancelled),
+  timestamp: Date,
+  notes: String
+}
+```
+
+#### cartItems (optional, for recovery)
+```javascript
+{
+  _id: ObjectId,
+  userId: ObjectId (ref: users),
+  items: [{
+    productId: ObjectId,
+    quantity: Number,
+    addedAt: Date
+  }],
+  expiresAt: Date (TTL index: 7 days)
+}
+```
+
+---
+
+## 7. PACKAGE INSTALLATION & VERIFICATION
+
+### Flutter Packages (pubspec.yaml)
+```yaml
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # State Management
+  riverpod: ^2.4.0
+  flutter_riverpod: ^2.4.0
+  
+  # Authentication
+  google_sign_in: ^6.1.0
+  firebase_auth: ^4.10.0
+  firebase_core: ^2.24.0
+  
+  # HTTP & API
+  dio: ^5.3.0
+  
+  # Local Storage
+  hive: ^2.2.0
+  hive_flutter: ^1.1.0
+  
+  # UI Components
+  flutter_staggered_grid_view: ^0.7.0
+  cached_network_image: ^3.3.0
+  image_picker: ^1.0.0
+  smooth_page_indicator: ^1.1.0
+  
+  # Theme & Customization
+  provider: ^6.0.0
+  google_fonts: ^6.0.0
+  
+  # Animations
+  lottie: ^2.7.0
+  
+  # Utilities
+  intl: ^0.19.0
+  uuid: ^4.0.0
+  dartz: ^0.10.0
+  
+  # Firebase Services
+  firebase_storage: ^11.5.0
+  
+  # Validation
+  form_validator: ^0.0.3
+  
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  build_runner: ^2.4.0
+  hive_generator: ^2.0.0
+
+flutter:
+  uses-material-design: true
+```
+
+### Flutter Setup Script (run in flutter_app/)
+```bash
+#!/bin/bash
+
+# Colors for output
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+echo "========================================"
+echo "Flutter Marketplace App - Setup"
+echo "========================================"
+
+# Check Flutter version
+echo -e "\n${GREEN}Checking Flutter installation...${NC}"
+flutter --version
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Flutter not found. Install from https://flutter.dev/docs/get-started/install${NC}"
+    exit 1
+fi
+
+# Check Dart version
+echo -e "\n${GREEN}Checking Dart version...${NC}"
+dart --version
+
+# Get packages
+echo -e "\n${GREEN}Getting Flutter packages...${NC}"
+flutter pub get
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Failed to get packages${NC}"
+    exit 1
+fi
+
+# Generate Hive adapters
+echo -e "\n${GREEN}Generating Hive adapters...${NC}"
+flutter pub run build_runner build --delete-conflicting-outputs
+
+# Check devices
+echo -e "\n${GREEN}Available devices:${NC}"
+flutter devices
+
+# Analysis
+echo -e "\n${GREEN}Running code analysis...${NC}"
+flutter analyze
+
+echo -e "\n${GREEN}Setup complete!${NC}"
+echo "Run with: flutter run"
+```
+
+### Node.js Backend Setup (backend/)
+```bash
+#!/bin/bash
+
+echo "========================================"
+echo "Backend - Setup & Verification"
+echo "========================================"
+
+# Check Node version
+echo -e "\n${GREEN}Checking Node.js...${NC}"
+node --version
+npm --version
+
+# Install dependencies
+echo -e "\n${GREEN}Installing npm packages...${NC}"
+npm install
+
+# Verify key packages
+echo -e "\n${GREEN}Verifying essential packages...${NC}"
+npm list express mongoose firebase-admin
+
+# Check TypeScript
+echo -e "\n${GREEN}Checking TypeScript...${NC}"
+npx tsc --version
+
+# Build TypeScript
+echo -e "\n${GREEN}Building TypeScript...${NC}"
+npm run build
+
+# Create .env
+if [ ! -f .env ]; then
+    echo -e "\n${GREEN}Creating .env file...${NC}"
+    cp .env.example .env
+    echo -e "${RED}IMPORTANT: Update .env with your credentials${NC}"
+fi
+
+echo -e "\n${GREEN}Backend setup complete!${NC}"
+echo "Run with: npm run dev"
+```
+
+### Backend package.json
+```json
+{
+  "name": "food-marketplace-backend",
+  "version": "1.0.0",
+  "description": "Backend for food marketplace app",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "nodemon src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongoose": "^7.5.0",
+    "firebase-admin": "^12.0.0",
+    "dotenv": "^16.3.1",
+    "cors": "^2.8.5",
+    "morgan": "^1.10.0",
+    "axios": "^1.5.0",
+    "zod": "^3.22.2",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.1.0",
+    "express-validator": "^7.0.0",
+    "helmet": "^7.1.0",
+    "compression": "^1.7.4"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.20",
+    "@types/node": "^20.8.0",
+    "typescript": "^5.2.2",
+    "ts-node": "^10.9.1",
+    "nodemon": "^3.0.1",
+    "eslint": "^8.51.0",
+    "@typescript-eslint/eslint-plugin": "^6.7.2",
+    "@typescript-eslint/parser": "^6.7.2"
+  }
+}
+```
+
+---
+
+## 8. KEY IMPLEMENTATION DETAILS
+
+### 8.1 State Management (Riverpod)
+```dart
+// Example: User provider
+final userProvider = StateNotifierProvider<UserNotifier, UserState>((ref) {
+  return UserNotifier();
+});
+
+// Product list with filtering
+final filteredProductsProvider = FutureProvider.family<List<Product>, ProductFilter>((ref, filter) {
+  return ref.watch(apiServiceProvider).getProducts(filter);
+});
+```
+
+### 8.2 Dark Theme Implementation
+```dart
+// app_theme.dart
+class AppTheme {
+  static ThemeData darkTheme(Color accentColor) {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      primaryColor: accentColor,
+      scaffoldBackgroundColor: const Color(0xFF121212),
+      colorScheme: ColorScheme.dark(
+        primary: accentColor,
+        surface: const Color(0xFF1E1E1E),
+        surfaceVariant: const Color(0xFF2A2A2A),
+      ),
+    );
+  }
+}
+```
+
+### 8.3 Glassmorphism Widget
+```dart
+// glass_card.dart
+class GlassCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsets padding;
+  
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          padding: padding,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.1),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.2),
+              width: 1,
+            ),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+```
+
+### 8.4 WhatsApp Integration
+```dart
+// whatsapp_service.dart
+class WhatsAppService {
+  static Future<void> sendOrderMessage({
+    required String sellerPhone,
+    required List<CartItem> items,
+    required String userAddress,
+    required String userName,
+    required String userPhone,
+    required double totalPrice,
+  }) async {
+    final message = _formatOrderMessage(
+      items: items,
+      userAddress: userAddress,
+      userName: userName,
+      userPhone: userPhone,
+      totalPrice: totalPrice,
+    );
+    
+    final encodedMessage = Uri.encodeComponent(message);
+    final whatsappUrl = "https://wa.me/$sellerPhone?text=$encodedMessage";
+    
+    if (await canLaunch(whatsappUrl)) {
+      await launch(whatsappUrl);
+    }
+  }
+  
+  static String _formatOrderMessage({...}) {
+    return '''Hello, I would like to place an order:
+
+Items:
+${items.map((e) => '- ${e.productName} (Qty: ${e.quantity}) - ₹${e.price}').join('\n')}
+
+Total: ₹$totalPrice
+
+Delivery Address:
+$userAddress
+
+Name: $userName
+Phone: $userPhone''';
+  }
+}
+```
+
+### 8.5 Order Filtering Logic
+```dart
+// Backend: seller.routes.ts
+router.get('/:sellerId/orders', authMiddleware, async (req, res) => {
+  const { status, dateFrom, dateTo, customerName, minPrice, maxPrice } = req.query;
+  
+  const filters: any = { sellerId: req.params.sellerId };
+  
+  if (status && status !== 'all') filters.status = status;
+  if (dateFrom || dateTo) {
+    filters.createdAt = {};
+    if (dateFrom) filters.createdAt.$gte = new Date(dateFrom);
+    if (dateTo) filters.createdAt.$lte = new Date(dateTo);
+  }
+  if (customerName) filters['deliveryAddress.name'] = new RegExp(customerName, 'i');
+  if (minPrice || maxPrice) {
+    filters.totalPrice = {};
+    if (minPrice) filters.totalPrice.$gte = parseFloat(minPrice);
+    if (maxPrice) filters.totalPrice.$lte = parseFloat(maxPrice);
+  }
+  
+  const orders = await Order.find(filters).sort({ createdAt: -1 });
+  res.json({ success: true, data: orders });
+});
+```
+
+---
+
+## 9. DEPLOYMENT & HOSTING
+
+### Flutter App Deployment
+- **Android**: Google Play Store (APK/AAB build)
+- **iOS**: Apple App Store (via TestFlight)
+- Use Firebase Hosting for web version (optional)
+
+### Backend Deployment Options
+1. **Firebase Functions** (serverless, auto-scaling)
+2. **DigitalOcean App Platform** (managed containers)
+3. **AWS EC2 + RDS** (for scale)
+4. **Heroku** (simple deployment, can be slow)
+
+### Environment Variables (Backend .env)
+```
+NODE_ENV=production
+PORT=5000
+MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/foodmarketplace
+FIREBASE_PROJECT_ID=your-project-id
+FIREBASE_PRIVATE_KEY=...
+GOOGLE_CLIENT_ID=...
+JWT_SECRET=your-secret-key
+WHATSAPP_API_KEY=...
+WHATSAPP_ACCOUNT_ID=...
+```
+
+### Environment Variables (Flutter .env)
+```
+API_BASE_URL=https://api.foodmarketplace.com/api/v1
+GOOGLE_CLIENT_ID_ANDROID=...
+GOOGLE_CLIENT_ID_IOS=...
+FIREBASE_PROJECT_ID=...
+```
+
+---
+
+## 10. TESTING & QUALITY ASSURANCE
+
+### Frontend Testing
+- Widget tests for UI components
+- Provider tests for state management
+- Integration tests for user flows
+
+### Backend Testing
+- Unit tests (services, utils)
+- Integration tests (API endpoints)
+- Database tests (schema validation)
+
+### Performance Testing
+- Load testing (100+ concurrent users)
+- Network throttling tests
+- Budget phone device testing
+
+---
+
+## 11. SECURITY CONSIDERATIONS
+
+1. **Authentication**: Firebase JWT, no sensitive data in local storage
+2. **Data Validation**: Zod schemas on backend, form validators on frontend
+3. **CORS**: Whitelist allowed origins only
+4. **Rate Limiting**: 100 requests/minute per IP
+5. **HTTPS Only**: All API calls encrypted
+6. **Password**: Not stored; Google auth preferred
+7. **Secrets**: Never commit .env files
+8. **Image Upload**: Validate file types, size limits (max 5MB)
+9. **Database**: MongoDB encryption at rest, IP whitelist
+
+---
+
+## 12. FUTURE ENHANCEMENTS
+
+1. **Ratings & Reviews**: User reviews for products/sellers
+2. **Wishlists**: Save favorite products
+3. **Real-Time Chat**: Socket.io for buyer-seller communication
+4. **Push Notifications**: Order status updates
+5. **Analytics Dashboard**: Seller insights (popular products, peak hours, etc.)
+6. **Wallet System**: In-app credits/refunds
+7. **Subscription/Delivery**: Recurring orders for regular items
+8. **Payment Gateway**: Razorpay/Stripe integration for e-commerce orders
+9. **Seller Verification**: Document upload, verification badges
+10. **Recommendation Engine**: ML-based product suggestions
+
+---
+
+## 13. SUCCESS CRITERIA & COMPLETION CHECKLIST
+
+### MVP (Minimum Viable Product)
+- [x] Google Sign-In authentication
+- [x] User profile setup
+- [x] Seller profile setup + admin approval
+- [x] Product listing with category filters
+- [x] Product detail view
+- [x] Cart functionality
+- [x] Order creation (e-commerce mode)
+- [x] WhatsApp order mode
+- [x] Order history with filters
+- [x] Seller dashboard (orders, sales history, order management)
+- [x] Account settings (theme customization, profile edit)
+- [x] Dark theme default
+- [x] Minimal, professional UI (no emojis)
+- [x] Glassmorphism elements
+- [x] Smooth animations
+- [x] Performance optimized for budget phones
+
+### Quality Standards
+- Code: Clean, documented, following Dart/TypeScript conventions
+- UI: Responsive, accessible (WCAG 2.1 AA)
+- Performance: First contentful paint < 2s, Largest contentful paint < 5s
+- Network: Works on 3G connections
+- Error Handling: Graceful error messages, offline mode indicator
+- Testing: >70% code coverage
+
+---
+
+## 14. GETTING STARTED COMMANDS
+
+### Initialize Flutter App
+```bash
+cd flutter_app
+flutter pub get
+flutter pub run build_runner build --delete-conflicting-outputs
+flutter run
+```
+
+### Initialize Backend
+```bash
+cd backend
+npm install
+npm run build
+npm run dev
+```
+
+### Create Admin Account (Backend Setup)
+```bash
+npm run scripts/create-admin.js
+# Follow prompts to create first admin account
+```
+
+---
+
+## 15. DOCUMENTATION FILES TO CREATE
+
+1. **API_ENDPOINTS.md**: Complete API reference with cURL examples
+2. **SETUP_GUIDE.md**: Step-by-step setup for developers
+3. **DATABASE_SCHEMA.md**: Detailed MongoDB collections reference
+4. **DEPLOYMENT.md**: Production deployment checklist
+5. **TESTING_GUIDE.md**: Testing procedures and commands
+6. **TROUBLESHOOTING.md**: Common issues and solutions
+
+---
+
+## SUMMARY
+
+This is a **production-ready fullstack specification** for a Flutter + Node.js/Express + MongoDB food & handmade products marketplace. The prompt covers:
+
+✓ Complete tech stack with package management
+✓ Directory structure (clean separation of concerns)
+✓ Feature specifications for buyers & sellers
+✓ API design (RESTful, properly structured)
+✓ Database schema (normalized, scalable)
+✓ UI/UX design (dark theme, glassmorphism, minimal)
+✓ Authentication (Google Sign-In + Firebase)
+✓ Order management (e-commerce + WhatsApp modes)
+✓ Filtering & search (products, orders)
+✓ Performance optimizations (budget phones)
+✓ Deployment & security
+✓ Setup scripts for verification
+
+**Next Steps**: Share this prompt with an AI assistant (Claude, ChatGPT, etc.) to generate:
+1. Complete Flutter codebase
+2. Backend API
+3. Setup scripts
+4. Documentation
+
+---
+
+**Last Updated**: 2024
+**Version**: 1.0.0 (Production Ready)
