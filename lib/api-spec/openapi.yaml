@@ -3,20 +3,32 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Food & Handmade Products Marketplace API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: users
+    description: User profile management
+  - name: products
+    description: Product catalog
+  - name: orders
+    description: Order management
+  - name: sellers
+    description: Seller management
+  - name: cart
+    description: Shopping cart
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,7 +36,705 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # AUTH
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterBody"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login with email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # USERS
+  /users/profile:
+    get:
+      operationId: getUserProfile
+      tags: [users]
+      summary: Get current user profile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+    put:
+      operationId: updateUserProfile
+      tags: [users]
+      summary: Update user profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileBody"
+      responses:
+        "200":
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+
+  /users/addresses:
+    get:
+      operationId: getAddresses
+      tags: [users]
+      summary: Get user addresses
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of addresses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Address"
+    post:
+      operationId: addAddress
+      tags: [users]
+      summary: Add new address
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddressBody"
+      responses:
+        "201":
+          description: Address added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Address"
+
+  /users/addresses/{id}:
+    put:
+      operationId: updateAddress
+      tags: [users]
+      summary: Update address
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddressBody"
+      responses:
+        "200":
+          description: Address updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Address"
+    delete:
+      operationId: deleteAddress
+      tags: [users]
+      summary: Delete address
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Address deleted
+
+  # PRODUCTS
+  /products:
+    get:
+      operationId: listProducts
+      tags: [products]
+      summary: List products with filters
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [newest, price_asc, price_desc, popular]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: sellerId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Product list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductListResponse"
+    post:
+      operationId: createProduct
+      tags: [products]
+      summary: Create a product (seller only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductBody"
+      responses:
+        "201":
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+
+  /products/{id}:
+    get:
+      operationId: getProduct
+      tags: [products]
+      summary: Get product by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Product details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateProduct
+      tags: [products]
+      summary: Update product (seller only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductBody"
+      responses:
+        "200":
+          description: Product updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+    delete:
+      operationId: deleteProduct
+      tags: [products]
+      summary: Delete product (seller only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Product deleted
+
+  # ORDERS
+  /orders:
+    get:
+      operationId: listOrders
+      tags: [orders]
+      summary: Get current user's orders
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        "200":
+          description: Order list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderListResponse"
+    post:
+      operationId: createOrder
+      tags: [orders]
+      summary: Create a new order
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrderBody"
+      responses:
+        "201":
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  /orders/{id}:
+    get:
+      operationId: getOrder
+      tags: [orders]
+      summary: Get order by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Order details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  /orders/{id}/status:
+    put:
+      operationId: updateOrderStatus
+      tags: [orders]
+      summary: Update order status (seller only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateOrderStatusBody"
+      responses:
+        "200":
+          description: Order updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  /orders/{id}/cancel:
+    put:
+      operationId: cancelOrder
+      tags: [orders]
+      summary: Cancel an order
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CancelOrderBody"
+      responses:
+        "200":
+          description: Order cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  # SELLERS
+  /sellers/dashboard:
+    get:
+      operationId: getSellerDashboard
+      tags: [sellers]
+      summary: Get seller dashboard stats
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SellerDashboard"
+
+  /sellers/profile:
+    get:
+      operationId: getSellerProfile
+      tags: [sellers]
+      summary: Get current seller profile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Seller profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SellerProfile"
+        "404":
+          description: Not a seller
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createSellerProfile
+      tags: [sellers]
+      summary: Create seller profile (apply to become seller)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SellerProfileBody"
+      responses:
+        "201":
+          description: Seller profile created (pending approval)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SellerProfile"
+    put:
+      operationId: updateSellerProfile
+      tags: [sellers]
+      summary: Update seller profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SellerProfileBody"
+      responses:
+        "200":
+          description: Seller profile updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SellerProfile"
+
+  /sellers/orders:
+    get:
+      operationId: getSellerOrders
+      tags: [sellers]
+      summary: Get seller's orders
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        "200":
+          description: Seller order list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderListResponse"
+
+  /sellers/sales-history:
+    get:
+      operationId: getSellerSalesHistory
+      tags: [sellers]
+      summary: Get seller sales history and stats
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Sales history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesHistory"
+
+  /sellers/approve/{userId}:
+    put:
+      operationId: approveSeller
+      tags: [sellers]
+      summary: Approve seller (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Seller approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SellerProfile"
+
+  /sellers/{id}:
+    get:
+      operationId: getPublicSellerProfile
+      tags: [sellers]
+      summary: Get public seller profile by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Seller profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SellerProfile"
+
+  # CART
+  /cart:
+    get:
+      operationId: getCart
+      tags: [cart]
+      summary: Get current user's cart
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Cart with items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
+    post:
+      operationId: addToCart
+      tags: [cart]
+      summary: Add item to cart
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddToCartBody"
+      responses:
+        "200":
+          description: Cart updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
+    delete:
+      operationId: clearCart
+      tags: [cart]
+      summary: Clear cart
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Cart cleared
+
+  /cart/{productId}:
+    put:
+      operationId: updateCartItem
+      tags: [cart]
+      summary: Update cart item quantity
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCartItemBody"
+      responses:
+        "200":
+          description: Cart updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
+    delete:
+      operationId: removeFromCart
+      tags: [cart]
+      summary: Remove item from cart
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Cart updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     HealthStatus:
       type: object
@@ -34,3 +744,711 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required:
+        - error
+
+    # Auth
+    RegisterBody:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        role:
+          type: string
+          enum: [buyer, seller]
+          default: buyer
+      required:
+        - name
+        - email
+        - phone
+
+    LoginBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+      required:
+        - email
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+      required:
+        - token
+        - user
+
+    # Users
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+          enum: [buyer, seller, admin]
+        sellerApproved:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - email
+        - phone
+        - role
+        - sellerApproved
+        - createdAt
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+        sellerApproved:
+          type: boolean
+        addresses:
+          type: array
+          items:
+            $ref: "#/components/schemas/Address"
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - email
+        - phone
+        - role
+        - sellerApproved
+        - addresses
+        - createdAt
+
+    UpdateProfileBody:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+
+    Address:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        name:
+          type: string
+        street:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        zipCode:
+          type: string
+        phone:
+          type: string
+        isDefault:
+          type: boolean
+      required:
+        - id
+        - userId
+        - name
+        - street
+        - city
+        - state
+        - zipCode
+        - phone
+        - isDefault
+
+    AddressBody:
+      type: object
+      properties:
+        name:
+          type: string
+        street:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        zipCode:
+          type: string
+        phone:
+          type: string
+        isDefault:
+          type: boolean
+      required:
+        - name
+        - street
+        - city
+        - state
+        - zipCode
+        - phone
+
+    # Products
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        sellerId:
+          type: integer
+        name:
+          type: string
+        category:
+          type: string
+        price:
+          type: number
+        stock:
+          type: integer
+        description:
+          type: string
+        images:
+          type: array
+          items:
+            type: string
+        unit:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        sellerName:
+          type: string
+        shopName:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - sellerId
+        - name
+        - category
+        - price
+        - stock
+        - description
+        - images
+        - unit
+        - tags
+        - sellerName
+        - shopName
+        - createdAt
+
+    ProductDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        sellerId:
+          type: integer
+        name:
+          type: string
+        category:
+          type: string
+        price:
+          type: number
+        stock:
+          type: integer
+        description:
+          type: string
+        images:
+          type: array
+          items:
+            type: string
+        unit:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        sellerName:
+          type: string
+        shopName:
+          type: string
+        sellerPhone:
+          type: string
+        sellerAddress:
+          type: string
+        sellerWhatsapp:
+          type: string
+        orderingMode:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - sellerId
+        - name
+        - category
+        - price
+        - stock
+        - description
+        - images
+        - unit
+        - tags
+        - sellerName
+        - shopName
+        - sellerPhone
+        - sellerAddress
+        - orderingMode
+        - createdAt
+
+    ProductBody:
+      type: object
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+        price:
+          type: number
+        stock:
+          type: integer
+        description:
+          type: string
+        images:
+          type: array
+          items:
+            type: string
+        unit:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+      required:
+        - name
+        - category
+        - price
+        - stock
+        - description
+        - unit
+
+    ProductListResponse:
+      type: object
+      properties:
+        products:
+          type: array
+          items:
+            $ref: "#/components/schemas/Product"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        totalPages:
+          type: integer
+      required:
+        - products
+        - total
+        - page
+        - limit
+        - totalPages
+
+    # Orders
+    OrderItem:
+      type: object
+      properties:
+        productId:
+          type: integer
+        productName:
+          type: string
+        quantity:
+          type: integer
+        price:
+          type: number
+        subtotal:
+          type: number
+        unit:
+          type: string
+      required:
+        - productId
+        - productName
+        - quantity
+        - price
+        - subtotal
+        - unit
+
+    DeliveryAddress:
+      type: object
+      properties:
+        name:
+          type: string
+        street:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        zipCode:
+          type: string
+        phone:
+          type: string
+      required:
+        - name
+        - street
+        - city
+        - state
+        - zipCode
+        - phone
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+        orderId:
+          type: string
+        buyerId:
+          type: integer
+        sellerId:
+          type: integer
+        buyerName:
+          type: string
+        sellerName:
+          type: string
+        shopName:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+        totalPrice:
+          type: number
+        deliveryAddress:
+          $ref: "#/components/schemas/DeliveryAddress"
+        orderMode:
+          type: string
+          enum: [ecommerce, whatsapp]
+        status:
+          type: string
+          enum: [pending, confirmed, shipped, delivered, cancelled]
+        paymentMethod:
+          type: string
+        paymentStatus:
+          type: string
+          enum: [pending, completed, failed]
+        sellerNotes:
+          type: string
+        trackingNumber:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - orderId
+        - buyerId
+        - sellerId
+        - buyerName
+        - sellerName
+        - shopName
+        - items
+        - totalPrice
+        - deliveryAddress
+        - orderMode
+        - status
+        - paymentStatus
+        - createdAt
+        - updatedAt
+
+    OrderListResponse:
+      type: object
+      properties:
+        orders:
+          type: array
+          items:
+            $ref: "#/components/schemas/Order"
+        total:
+          type: integer
+        page:
+          type: integer
+        totalPages:
+          type: integer
+      required:
+        - orders
+        - total
+        - page
+        - totalPages
+
+    CreateOrderBody:
+      type: object
+      properties:
+        sellerId:
+          type: integer
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: integer
+              quantity:
+                type: integer
+            required:
+              - productId
+              - quantity
+        deliveryAddress:
+          $ref: "#/components/schemas/DeliveryAddress"
+        orderMode:
+          type: string
+          enum: [ecommerce, whatsapp]
+        paymentMethod:
+          type: string
+      required:
+        - sellerId
+        - items
+        - deliveryAddress
+        - orderMode
+
+    UpdateOrderStatusBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, confirmed, shipped, delivered, cancelled]
+        sellerNotes:
+          type: string
+        trackingNumber:
+          type: string
+      required:
+        - status
+
+    CancelOrderBody:
+      type: object
+      properties:
+        reason:
+          type: string
+
+    # Sellers
+    SellerProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        shopName:
+          type: string
+        phone:
+          type: string
+        address:
+          type: string
+        orderingMode:
+          type: string
+          enum: [ecommerce, whatsapp]
+        whatsappNumber:
+          type: string
+        paymentMethods:
+          type: array
+          items:
+            type: string
+        verified:
+          type: boolean
+        userName:
+          type: string
+        userEmail:
+          type: string
+        totalProducts:
+          type: integer
+        totalOrders:
+          type: integer
+        createdAt:
+          type: string
+      required:
+        - id
+        - userId
+        - shopName
+        - phone
+        - address
+        - orderingMode
+        - paymentMethods
+        - verified
+        - userName
+        - userEmail
+        - createdAt
+
+    SellerProfileBody:
+      type: object
+      properties:
+        shopName:
+          type: string
+        phone:
+          type: string
+        address:
+          type: string
+        orderingMode:
+          type: string
+          enum: [ecommerce, whatsapp]
+        whatsappNumber:
+          type: string
+        paymentMethods:
+          type: array
+          items:
+            type: string
+      required:
+        - shopName
+        - phone
+        - address
+        - orderingMode
+
+    SellerDashboard:
+      type: object
+      properties:
+        totalProducts:
+          type: integer
+        totalOrders:
+          type: integer
+        pendingOrders:
+          type: integer
+        totalRevenue:
+          type: number
+        recentOrders:
+          type: array
+          items:
+            $ref: "#/components/schemas/Order"
+        orderingMode:
+          type: string
+      required:
+        - totalProducts
+        - totalOrders
+        - pendingOrders
+        - totalRevenue
+        - recentOrders
+        - orderingMode
+
+    SalesHistory:
+      type: object
+      properties:
+        totalSales:
+          type: number
+        totalOrders:
+          type: integer
+        avgOrderValue:
+          type: number
+        orders:
+          type: array
+          items:
+            $ref: "#/components/schemas/Order"
+      required:
+        - totalSales
+        - totalOrders
+        - avgOrderValue
+        - orders
+
+    # Cart
+    CartItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        productId:
+          type: integer
+        productName:
+          type: string
+        productImage:
+          type: string
+        price:
+          type: number
+        quantity:
+          type: integer
+        stock:
+          type: integer
+        sellerId:
+          type: integer
+        sellerName:
+          type: string
+        unit:
+          type: string
+        subtotal:
+          type: number
+      required:
+        - id
+        - productId
+        - productName
+        - productImage
+        - price
+        - quantity
+        - stock
+        - sellerId
+        - sellerName
+        - unit
+        - subtotal
+
+    Cart:
+      type: object
+      properties:
+        id:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CartItem"
+        total:
+          type: number
+        itemCount:
+          type: integer
+      required:
+        - id
+        - items
+        - total
+        - itemCount
+
+    AddToCartBody:
+      type: object
+      properties:
+        productId:
+          type: integer
+        quantity:
+          type: integer
+          minimum: 1
+      required:
+        - productId
+        - quantity
+
+    UpdateCartItemBody:
+      type: object
+      properties:
+        quantity:
+          type: integer
+          minimum: 0
+      required:
+        - quantity
