@@ -22,7 +22,7 @@ export default function CheckoutScreen() {
   const [phone, setPhone] = useState(user?.phone ?? "");
   const [street, setStreet] = useState("");
   const [city, setCity] = useState("");
-  const [state, setState] = useState("");
+  const [stateName, setStateName] = useState("");
   const [zipCode, setZipCode] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -33,12 +33,16 @@ export default function CheckoutScreen() {
   const sellerIds = [...new Set(items.map(i => i.sellerId))];
 
   const handleConfirm = async () => {
-    if (!street || !city || !state || !zipCode) {
-      Alert.alert("Missing Info", "Please fill in the delivery address");
+    if (!name.trim() || !phone.trim() || !street.trim() || !city.trim() || !stateName.trim() || !zipCode.trim()) {
+      Alert.alert("Missing Info", "Please fill in all delivery address fields");
       return;
     }
     if (!token || !user) {
       router.push("/login");
+      return;
+    }
+    if (items.length === 0) {
+      Alert.alert("Empty Cart", "Your cart is empty");
       return;
     }
 
@@ -46,36 +50,51 @@ export default function CheckoutScreen() {
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
+      const deliveryAddress = { name: name.trim(), phone: phone.trim(), street: street.trim(), city: city.trim(), state: stateName.trim(), zipCode: zipCode.trim() };
+
       for (const sellerId of sellerIds) {
         const sellerItems = items.filter(i => i.sellerId === sellerId);
-        await fetch(`${API_BASE}/api/orders`, {
+        const res = await fetch(`${API_BASE}/api/orders`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({
             sellerId,
             items: sellerItems.map(i => ({ productId: i.productId, quantity: i.quantity })),
-            deliveryAddress: { name, phone, street, city, state, zipCode },
+            deliveryAddress,
             orderMode: mode,
           }),
         });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message ?? "Failed to place order");
+        }
       }
 
       if (mode === "whatsapp") {
+        // Find seller whatsapp from items (use sellerName as fallback — ideally fetch from API)
         const firstSeller = items[0];
+        const sellerPhone = firstSeller?.sellerName ?? "";
         const msg = encodeURIComponent(
-          `Hello, I would like to place an order:\n\nItems:\n${items.map(i => `- ${i.productName} (Qty: ${i.quantity}) - ₹${(i.price * i.quantity).toFixed(0)}`).join("\n")}\n\nTotal: ₹${total.toFixed(0)}\n\nDelivery Address:\n${street}, ${city}, ${state} - ${zipCode}\n\nName: ${name}\nPhone: ${phone}`
+          `Hello! I would like to place an order:\n\n` +
+          items.map(i => `• ${i.productName} ×${i.quantity} — ₹${(i.price * i.quantity).toFixed(0)}`).join("\n") +
+          `\n\nTotal: ₹${total.toFixed(0)}\n\nDelivery to:\n${deliveryAddress.street}, ${deliveryAddress.city}, ${deliveryAddress.state} - ${deliveryAddress.zipCode}\nName: ${name}\nPhone: ${phone}`
         );
-        Linking.openURL(`https://wa.me/${firstSeller.sellerName}?text=${msg}`).catch(() => {});
+        const waPhone = sellerPhone.replace(/[^0-9+]/g, "");
+        if (waPhone) {
+          Linking.openURL(`https://wa.me/${waPhone}?text=${msg}`).catch(() => {});
+        }
       }
 
       clearCart();
       router.replace("/(tabs)/orders");
-    } catch {
-      Alert.alert("Error", "Failed to place order. Please try again.");
+    } catch (e) {
+      Alert.alert("Error", (e as Error).message || "Failed to place order. Please try again.");
     } finally {
       setLoading(false);
     }
   };
+
+  const inputStyle = [styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.input }];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -87,7 +106,7 @@ export default function CheckoutScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: 100 + bottomPad }]}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: 100 + bottomPad }]} keyboardShouldPersistTaps="handled">
         {/* Order summary */}
         <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>Order Summary</Text>
@@ -108,14 +127,18 @@ export default function CheckoutScreen() {
         <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>Order Method</Text>
           <View style={styles.modeRow}>
-            {([["ecommerce", "E-Commerce", "bag-outline"], ["whatsapp", "WhatsApp", "logo-whatsapp"]] as const).map(([m, label, icon]) => (
+            {([
+              ["ecommerce", "E-Commerce", "bag-handle-outline", "Track orders in app"],
+              ["whatsapp", "WhatsApp", "logo-whatsapp", "Message seller directly"],
+            ] as const).map(([m, label, icon, desc]) => (
               <Pressable
                 key={m}
-                style={[styles.modeBtn, { borderColor: mode === m ? colors.primary : colors.border, backgroundColor: mode === m ? colors.primary + "15" : colors.card }]}
+                style={[styles.modeBtn, { borderColor: mode === m ? colors.primary : colors.border, backgroundColor: mode === m ? colors.primary + "12" : colors.card }]}
                 onPress={() => setMode(m)}
               >
                 <Ionicons name={icon} size={22} color={mode === m ? colors.primary : colors.mutedForeground} />
-                <Text style={[styles.modeLabel, { color: mode === m ? colors.primary : colors.mutedForeground }]}>{label}</Text>
+                <Text style={[styles.modeLabel, { color: mode === m ? colors.primary : colors.foreground }]}>{label}</Text>
+                <Text style={[styles.modeDesc, { color: colors.mutedForeground }]}>{desc}</Text>
               </Pressable>
             ))}
           </View>
@@ -124,28 +147,25 @@ export default function CheckoutScreen() {
         {/* Delivery Address */}
         <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>Delivery Address</Text>
-          {[
-            ["Name", name, setName, "default" as const, "name"],
-            ["Phone", phone, setPhone, "phone-pad" as const, "tel"],
-            ["Street", street, setStreet, "default" as const, "street-address"],
-            ["City", city, setCity, "default" as const, "address-level2"],
-            ["State", state, setState, "default" as const, "address-level1"],
-            ["Zip Code", zipCode, setZipCode, "numeric" as const, "postal-code"],
-          ].map(([placeholder, value, setter]) => (
-            <TextInput
-              key={placeholder as string}
-              style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.input }]}
-              placeholder={placeholder as string}
-              placeholderTextColor={colors.mutedForeground}
-              value={value as string}
-              onChangeText={setter as (v: string) => void}
-            />
-          ))}
+          <View style={styles.formGrid}>
+            <TextInput style={[...inputStyle, { flex: 1 }]} placeholder="Full Name" placeholderTextColor={colors.mutedForeground} value={name} onChangeText={setName} autoCapitalize="words" />
+            <TextInput style={[...inputStyle, { flex: 1 }]} placeholder="Phone" placeholderTextColor={colors.mutedForeground} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+          </View>
+          <TextInput style={inputStyle} placeholder="Street address" placeholderTextColor={colors.mutedForeground} value={street} onChangeText={setStreet} />
+          <View style={styles.formGrid}>
+            <TextInput style={[...inputStyle, { flex: 1 }]} placeholder="City" placeholderTextColor={colors.mutedForeground} value={city} onChangeText={setCity} />
+            <TextInput style={[...inputStyle, { flex: 1 }]} placeholder="State" placeholderTextColor={colors.mutedForeground} value={stateName} onChangeText={setStateName} />
+          </View>
+          <TextInput style={inputStyle} placeholder="Zip Code" placeholderTextColor={colors.mutedForeground} value={zipCode} onChangeText={setZipCode} keyboardType="numeric" />
         </View>
       </ScrollView>
 
       {/* Footer */}
       <View style={[styles.footer, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: bottomPad }]}>
+        <View style={styles.footerTotal}>
+          <Text style={[styles.footerLabel, { color: colors.mutedForeground }]}>Total to pay</Text>
+          <Text style={[styles.footerAmount, { color: colors.foreground }]}>₹{total.toFixed(0)}</Text>
+        </View>
         <Pressable
           style={[styles.confirmBtn, { backgroundColor: colors.primary, opacity: loading ? 0.7 : 1 }]}
           onPress={handleConfirm}
@@ -182,11 +202,16 @@ const styles = StyleSheet.create({
   totalRow: { flexDirection: "row", justifyContent: "space-between", paddingTop: 4 },
   totalLabel: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
   totalValue: { fontSize: 20, fontFamily: "Inter_700Bold" },
-  modeRow: { flexDirection: "row", gap: 12 },
-  modeBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, padding: 14, borderRadius: 12, borderWidth: 2 },
-  modeLabel: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  modeRow: { flexDirection: "row", gap: 10 },
+  modeBtn: { flex: 1, alignItems: "center", padding: 14, borderRadius: 14, borderWidth: 1.5, gap: 4 },
+  modeLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  modeDesc: { fontSize: 11, fontFamily: "Inter_400Regular", textAlign: "center" },
+  formGrid: { flexDirection: "row", gap: 10 },
   input: { height: 48, borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, fontSize: 14, fontFamily: "Inter_400Regular" },
-  footer: { padding: 16, borderTopWidth: 1 },
+  footer: { padding: 16, borderTopWidth: 1, gap: 10 },
+  footerTotal: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  footerLabel: { fontSize: 13, fontFamily: "Inter_400Regular" },
+  footerAmount: { fontSize: 20, fontFamily: "Inter_700Bold" },
   confirmBtn: { height: 54, borderRadius: 14, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
   confirmLabel: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
 });

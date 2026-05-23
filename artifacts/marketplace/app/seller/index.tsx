@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, Platform, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Platform, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { OrderStatusBadge } from "@/components/OrderStatusBadge";
 import { useAuth } from "@/context/AuthContext";
@@ -11,6 +11,7 @@ import { useColors } from "@/hooks/useColors";
 const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
 interface Dashboard {
+  sellerId: number;
   totalProducts: number; totalOrders: number; pendingOrders: number;
   totalRevenue: number; orderingMode: string;
   recentOrders: Array<{ id: number; orderId: string; buyerName: string; totalPrice: number; status: string; createdAt: string; items: Array<{ productName: string; quantity: number }> }>;
@@ -20,17 +21,23 @@ interface Product {
   id: number; name: string; category: string; price: number; stock: number; images: string[]; unit: string;
 }
 
+interface SellerOrder {
+  id: number; orderId: string; buyerName: string; totalPrice: number; status: string; createdAt: string;
+  items: Array<{ productName: string; quantity: number }>;
+}
+
 type Tab = "dashboard" | "products" | "orders";
 
 export default function SellerDashboardScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { token, user } = useAuth();
+  const { token } = useAuth();
 
   const [tab, setTab] = useState<Tab>("dashboard");
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<SellerOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -39,12 +46,19 @@ export default function SellerDashboardScreen() {
     if (reset) setRefreshing(true);
     else setLoading(true);
     try {
-      const [dashRes, prodRes] = await Promise.all([
-        fetch(`${API_BASE}/api/sellers/dashboard`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API_BASE}/api/products?sellerId=me&limit=50`, { headers: { Authorization: `Bearer ${token}` } }),
+      // Always fetch dashboard first to get sellerId
+      const dashRes = await fetch(`${API_BASE}/api/sellers/dashboard`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!dashRes.ok) throw new Error("Not a seller");
+      const dash: Dashboard = await dashRes.json();
+      setDashboard(dash);
+
+      // Fetch products using sellerId from dashboard
+      const [prodRes, ordersRes] = await Promise.all([
+        fetch(`${API_BASE}/api/products?sellerId=${dash.sellerId}&limit=50`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/sellers/orders?limit=30`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
-      if (dashRes.ok) setDashboard(await dashRes.json());
       if (prodRes.ok) { const d = await prodRes.json(); setProducts(d.products ?? []); }
+      if (ordersRes.ok) { const d = await ordersRes.json(); setOrders(d.orders ?? []); }
     } catch {
     } finally {
       setLoading(false);
@@ -58,10 +72,38 @@ export default function SellerDashboardScreen() {
   const bottomPad = Platform.OS === "web" ? 34 : Math.max(insets.bottom, 16);
 
   const handleDeleteProduct = async (productId: number) => {
-    if (!token) return;
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    await fetch(`${API_BASE}/api/products/${productId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
-    fetchData(true);
+    Alert.alert("Delete Product", "Are you sure you want to remove this product?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete", style: "destructive",
+        onPress: async () => {
+          if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          await fetch(`${API_BASE}/api/products/${productId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+          fetchData(true);
+        }
+      },
+    ]);
+  };
+
+  const handleUpdateOrderStatus = async (orderId: number, currentStatus: string) => {
+    const statusFlow: Record<string, string> = {
+      pending: "confirmed",
+      confirmed: "shipped",
+      shipped: "delivered",
+    };
+    const nextStatus = statusFlow[currentStatus];
+    if (!nextStatus) return;
+
+    try {
+      await fetch(`${API_BASE}/api/orders/${orderId}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      fetchData(true);
+    } catch {
+      Alert.alert("Error", "Failed to update order status");
+    }
   };
 
   if (loading) {
@@ -72,13 +114,30 @@ export default function SellerDashboardScreen() {
     );
   }
 
+  if (!dashboard) {
+    return (
+      <View style={[styles.container, styles.centered, { backgroundColor: colors.background }]}>
+        <Ionicons name="storefront-outline" size={48} color={colors.mutedForeground} />
+        <Text style={[styles.emptyText, { color: colors.foreground }]}>No seller profile found</Text>
+        <Pressable style={[styles.addProductBtn, { backgroundColor: colors.primary }]} onPress={() => router.replace("/become-seller")}>
+          <Text style={[{ color: colors.primaryForeground, fontFamily: "Inter_600SemiBold" }]}>Apply to Sell</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   const StatCard = ({ icon, label, value, color }: { icon: string; label: string; value: string; color: string }) => (
     <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      <Ionicons name={icon as never} size={24} color={color} />
+      <Ionicons name={icon as never} size={22} color={color} />
       <Text style={[styles.statValue, { color: colors.foreground }]}>{value}</Text>
       <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{label}</Text>
     </View>
   );
+
+  const listData: (Product | SellerOrder | Dashboard["recentOrders"][0])[] =
+    tab === "products" ? products :
+    tab === "orders" ? orders :
+    dashboard.recentOrders;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -89,40 +148,49 @@ export default function SellerDashboardScreen() {
           </Pressable>
           <Text style={[styles.title, { color: colors.foreground }]}>Seller Dashboard</Text>
         </View>
-        <Pressable onPress={() => router.push("/seller/add-product")} style={[styles.addBtn, { backgroundColor: colors.primary }]}>
-          <Ionicons name="add" size={22} color={colors.primaryForeground} />
-        </Pressable>
+        {tab === "products" && (
+          <Pressable onPress={() => router.push("/seller/add-product")} style={[styles.addBtn, { backgroundColor: colors.primary }]}>
+            <Ionicons name="add" size={22} color={colors.primaryForeground} />
+          </Pressable>
+        )}
       </View>
 
       {/* Tabs */}
-      <View style={[styles.tabs, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+      <View style={[styles.tabsRow, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         {(["dashboard", "products", "orders"] as Tab[]).map(t => (
           <Pressable
             key={t}
-            style={[styles.tab, { borderBottomColor: tab === t ? colors.primary : "transparent" }]}
+            style={[styles.tabBtn, { borderBottomColor: tab === t ? colors.primary : "transparent" }]}
             onPress={() => setTab(t)}
           >
             <Text style={[styles.tabLabel, { color: tab === t ? colors.primary : colors.mutedForeground }]}>
-              {t.charAt(0).toUpperCase() + t.slice(1)}
+              {t === "dashboard" ? "Overview" : t.charAt(0).toUpperCase() + t.slice(1)}
             </Text>
+            {t === "orders" && dashboard.pendingOrders > 0 && (
+              <View style={[styles.tabBadge, { backgroundColor: colors.warning }]}>
+                <Text style={styles.tabBadgeText}>{dashboard.pendingOrders}</Text>
+              </View>
+            )}
           </Pressable>
         ))}
       </View>
 
       <FlatList
-        data={tab === "dashboard" ? (dashboard?.recentOrders ?? []) : tab === "products" ? products : []}
-        keyExtractor={item => item.id.toString()}
+        data={listData as never[]}
+        keyExtractor={(item: never) => (item as { id: number }).id.toString()}
         contentContainerStyle={[styles.list, { paddingBottom: bottomPad + 20 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchData(true)} tintColor={colors.primary} />}
         scrollEnabled
         ListHeaderComponent={
-          tab === "dashboard" && dashboard ? (
-            <View style={styles.statsGrid}>
-              <StatCard icon="bag-outline" label="Products" value={dashboard.totalProducts.toString()} color={colors.primary} />
-              <StatCard icon="receipt-outline" label="Orders" value={dashboard.totalOrders.toString()} color={colors.warning} />
-              <StatCard icon="time-outline" label="Pending" value={dashboard.pendingOrders.toString()} color={colors.destructive} />
-              <StatCard icon="cash-outline" label="Revenue" value={`₹${dashboard.totalRevenue.toFixed(0)}`} color={colors.success} />
-              {dashboard.recentOrders.length > 0 && (
+          tab === "dashboard" ? (
+            <View>
+              <View style={styles.statsGrid}>
+                <StatCard icon="bag-outline" label="Products" value={dashboard.totalProducts.toString()} color={colors.primary} />
+                <StatCard icon="receipt-outline" label="Orders" value={dashboard.totalOrders.toString()} color={colors.warning} />
+                <StatCard icon="time-outline" label="Pending" value={dashboard.pendingOrders.toString()} color={dashboard.pendingOrders > 0 ? colors.destructive : colors.success} />
+                <StatCard icon="cash-outline" label="Revenue" value={`₹${dashboard.totalRevenue.toFixed(0)}`} color={colors.success} />
+              </View>
+              {listData.length > 0 && (
                 <Text style={[styles.recentTitle, { color: colors.foreground }]}>Recent Orders</Text>
               )}
             </View>
@@ -135,32 +203,58 @@ export default function SellerDashboardScreen() {
               <View style={[styles.productRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <View style={styles.productInfo}>
                   <Text style={[styles.productName, { color: colors.foreground }]}>{p.name}</Text>
-                  <Text style={[styles.productMeta, { color: colors.mutedForeground }]}>₹{p.price} · {p.stock} in stock · {p.unit}</Text>
+                  <Text style={[styles.productMeta, { color: colors.mutedForeground }]}>
+                    ₹{p.price} · {p.stock} in stock · {p.unit}
+                  </Text>
                 </View>
                 <View style={styles.productActions}>
-                  <Pressable onPress={() => router.push({ pathname: "/seller/add-product", params: { id: p.id.toString() } })}>
-                    <Ionicons name="pencil-outline" size={20} color={colors.primary} />
+                  <Pressable
+                    style={[styles.actionIconBtn, { backgroundColor: colors.primary + "20" }]}
+                    onPress={() => router.push({ pathname: "/seller/add-product", params: { id: p.id.toString() } })}
+                  >
+                    <Ionicons name="pencil-outline" size={16} color={colors.primary} />
                   </Pressable>
-                  <Pressable onPress={() => handleDeleteProduct(p.id)}>
-                    <Ionicons name="trash-outline" size={20} color={colors.destructive} />
+                  <Pressable
+                    style={[styles.actionIconBtn, { backgroundColor: colors.destructive + "20" }]}
+                    onPress={() => handleDeleteProduct(p.id)}
+                  >
+                    <Ionicons name="trash-outline" size={16} color={colors.destructive} />
                   </Pressable>
                 </View>
               </View>
             );
           }
-          // Dashboard/Orders view
-          const o = item as Dashboard["recentOrders"][0];
+
+          const o = item as SellerOrder;
+          const canAdvance = ["pending", "confirmed", "shipped"].includes(o.status);
+          const nextStatusLabel: Record<string, string> = {
+            pending: "Confirm", confirmed: "Mark Shipped", shipped: "Mark Delivered",
+          };
+
           return (
             <View style={[styles.orderCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={styles.orderHeader}>
-                <Text style={[styles.orderId, { color: colors.primary }]}>{o.orderId}</Text>
-                <OrderStatusBadge status={o.status} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.orderId, { color: colors.primary }]}>{o.orderId}</Text>
+                  <Text style={[styles.buyerName, { color: colors.foreground }]}>{o.buyerName}</Text>
+                  <Text style={[styles.orderItems, { color: colors.mutedForeground }]} numberOfLines={1}>
+                    {o.items?.map(i => `${i.productName} ×${i.quantity}`).join(", ")}
+                  </Text>
+                </View>
+                <View style={styles.orderRight}>
+                  <OrderStatusBadge status={o.status} />
+                  <Text style={[styles.orderTotal, { color: colors.foreground }]}>₹{Number(o.totalPrice).toFixed(0)}</Text>
+                </View>
               </View>
-              <Text style={[styles.buyerName, { color: colors.foreground }]}>{o.buyerName}</Text>
-              <Text style={[styles.orderItems, { color: colors.mutedForeground }]} numberOfLines={1}>
-                {o.items?.map(i => `${i.productName} ×${i.quantity}`).join(", ")}
-              </Text>
-              <Text style={[styles.orderTotal, { color: colors.foreground }]}>₹{Number(o.totalPrice).toFixed(0)}</Text>
+              {canAdvance && (
+                <Pressable
+                  style={[styles.advanceBtn, { backgroundColor: colors.primary }]}
+                  onPress={() => handleUpdateOrderStatus(o.id, o.status)}
+                >
+                  <Ionicons name="arrow-forward-circle-outline" size={16} color="#fff" />
+                  <Text style={styles.advanceBtnText}>{nextStatusLabel[o.status]}</Text>
+                </Pressable>
+              )}
             </View>
           );
         }}
@@ -168,7 +262,7 @@ export default function SellerDashboardScreen() {
           <View style={[styles.centered, { marginTop: 40 }]}>
             <Ionicons name={tab === "products" ? "bag-outline" : "receipt-outline"} size={40} color={colors.mutedForeground} />
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-              {tab === "products" ? "No products yet" : "No orders yet"}
+              {tab === "products" ? "No products yet" : tab === "orders" ? "No orders yet" : "No recent orders"}
             </Text>
             {tab === "products" && (
               <Pressable style={[styles.addProductBtn, { backgroundColor: colors.primary }]} onPress={() => router.push("/seller/add-product")}>
@@ -190,26 +284,32 @@ const styles = StyleSheet.create({
   backBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
   title: { fontSize: 20, fontFamily: "Inter_700Bold" },
   addBtn: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  tabs: { flexDirection: "row", borderBottomWidth: 1 },
-  tab: { flex: 1, paddingVertical: 12, alignItems: "center", borderBottomWidth: 2 },
-  tabLabel: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  tabsRow: { flexDirection: "row", borderBottomWidth: 1 },
+  tabBtn: { flex: 1, paddingVertical: 12, alignItems: "center", borderBottomWidth: 2, flexDirection: "row", justifyContent: "center", gap: 6 },
+  tabLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  tabBadge: { width: 18, height: 18, borderRadius: 9, alignItems: "center", justifyContent: "center" },
+  tabBadgeText: { color: "#fff", fontSize: 10, fontFamily: "Inter_700Bold" },
   statsGrid: { flexDirection: "row", flexWrap: "wrap", padding: 12, gap: 8 },
   statCard: { flex: 1, minWidth: "45%", borderRadius: 14, borderWidth: 1, padding: 14, alignItems: "center", gap: 6 },
   statValue: { fontSize: 22, fontFamily: "Inter_700Bold" },
   statLabel: { fontSize: 12, fontFamily: "Inter_400Regular" },
-  recentTitle: { width: "100%", fontSize: 16, fontFamily: "Inter_600SemiBold", paddingTop: 8, paddingHorizontal: 4 },
+  recentTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold", paddingHorizontal: 16, paddingBottom: 8 },
   list: { padding: 12, gap: 10 },
   productRow: { flexDirection: "row", borderRadius: 14, borderWidth: 1, padding: 14, alignItems: "center" },
   productInfo: { flex: 1 },
   productName: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
   productMeta: { fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 2 },
-  productActions: { flexDirection: "row", gap: 16 },
-  orderCard: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 6 },
-  orderHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  productActions: { flexDirection: "row", gap: 8 },
+  actionIconBtn: { width: 34, height: 34, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  orderCard: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 10 },
+  orderHeader: { flexDirection: "row", gap: 12 },
   orderId: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
-  buyerName: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  orderItems: { fontSize: 13, fontFamily: "Inter_400Regular" },
-  orderTotal: { fontSize: 16, fontFamily: "Inter_700Bold" },
+  buyerName: { fontSize: 15, fontFamily: "Inter_600SemiBold", marginTop: 2 },
+  orderItems: { fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 2 },
+  orderRight: { alignItems: "flex-end", gap: 6 },
+  orderTotal: { fontSize: 15, fontFamily: "Inter_700Bold" },
+  advanceBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", height: 38, borderRadius: 10, gap: 6 },
+  advanceBtnText: { color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 13 },
   emptyText: { fontSize: 15, fontFamily: "Inter_400Regular" },
   addProductBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12, marginTop: 4 },
 });

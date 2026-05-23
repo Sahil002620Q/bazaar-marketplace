@@ -34,7 +34,13 @@ export default function AccountScreen() {
     );
   }
 
-  const roleLabel = user.role === "seller" ? (user.sellerApproved ? "Verified Seller" : "Seller (Pending)") : "Buyer";
+  const roleLabel = user.role === "admin" ? "Admin"
+    : user.role === "seller" ? (user.sellerApproved ? "Verified Seller" : "Seller (Pending)")
+    : "Buyer";
+
+  const roleColor = user.role === "admin" ? colors.destructive
+    : user.sellerApproved ? colors.success
+    : colors.mutedForeground;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -45,7 +51,7 @@ export default function AccountScreen() {
       <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]}>
         {/* Profile card */}
         <View style={[styles.profileCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
+          <View style={[styles.avatar, { backgroundColor: user.role === "admin" ? colors.destructive : colors.primary }]}>
             <Text style={[styles.avatarText, { color: colors.primaryForeground }]}>
               {user.name.charAt(0).toUpperCase()}
             </Text>
@@ -53,17 +59,17 @@ export default function AccountScreen() {
           <View style={styles.profileInfo}>
             <Text style={[styles.name, { color: colors.foreground }]}>{user.name}</Text>
             <Text style={[styles.email, { color: colors.mutedForeground }]}>{user.email}</Text>
-            <View style={[styles.roleBadge, { backgroundColor: user.sellerApproved ? colors.success + "20" : colors.muted }]}>
-              <Text style={[styles.roleText, { color: user.sellerApproved ? colors.success : colors.mutedForeground }]}>{roleLabel}</Text>
+            <View style={[styles.roleBadge, { backgroundColor: roleColor + "20" }]}>
+              <Text style={[styles.roleText, { color: roleColor }]}>{roleLabel}</Text>
             </View>
           </View>
         </View>
 
-        {/* Actions */}
+        {/* Profile info */}
         <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>Profile</Text>
           {[
-            { icon: "person-outline", label: "Phone", value: user.phone },
+            { icon: "call-outline", label: "Phone", value: user.phone },
             { icon: "mail-outline", label: "Email", value: user.email },
           ].map(item => (
             <View key={item.label} style={[styles.infoRow, { borderBottomColor: colors.border }]}>
@@ -74,41 +80,81 @@ export default function AccountScreen() {
           ))}
         </View>
 
+        {/* Actions */}
         <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>Quick Actions</Text>
 
-          {(user.role === "seller" || user.sellerApproved) && (
+          {/* Admin panel — only for admins */}
+          {user.role === "admin" && (
+            <Pressable
+              style={[styles.actionRow, { borderBottomColor: colors.border }]}
+              onPress={() => router.push("/admin")}
+            >
+              <View style={[styles.actionIcon, { backgroundColor: colors.destructive + "20" }]}>
+                <Ionicons name="shield-checkmark-outline" size={18} color={colors.destructive} />
+              </View>
+              <Text style={[styles.actionLabel, { color: colors.foreground }]}>Admin Panel</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
+            </Pressable>
+          )}
+
+          {/* Seller dashboard — for approved sellers */}
+          {(user.role === "seller" || user.role === "admin") && user.sellerApproved && (
             <Pressable
               style={[styles.actionRow, { borderBottomColor: colors.border }]}
               onPress={() => router.push("/seller")}
             >
-              <Ionicons name="storefront-outline" size={20} color={colors.primary} />
+              <View style={[styles.actionIcon, { backgroundColor: colors.primary + "20" }]}>
+                <Ionicons name="storefront-outline" size={18} color={colors.primary} />
+              </View>
               <Text style={[styles.actionLabel, { color: colors.foreground }]}>Seller Dashboard</Text>
               <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
             </Pressable>
           )}
 
+          {/* Become a seller — for buyers only */}
           {user.role === "buyer" && !user.sellerApproved && (
             <Pressable
               style={[styles.actionRow, { borderBottomColor: colors.border }]}
               onPress={() => router.push("/become-seller")}
             >
-              <Ionicons name="storefront-outline" size={20} color={colors.warning} />
-              <Text style={[styles.actionLabel, { color: colors.foreground }]}>Become a Seller</Text>
+              <View style={[styles.actionIcon, { backgroundColor: colors.warning + "20" }]}>
+                <Ionicons name="storefront-outline" size={18} color={colors.warning} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.actionLabel, { color: colors.foreground }]}>Become a Seller</Text>
+                <Text style={[styles.actionSub, { color: colors.mutedForeground }]}>Apply to sell on Bazaar</Text>
+              </View>
               <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
             </Pressable>
+          )}
+
+          {/* Pending seller badge */}
+          {user.role === "seller" && !user.sellerApproved && (
+            <View style={[styles.actionRow, { borderBottomColor: colors.border }]}>
+              <View style={[styles.actionIcon, { backgroundColor: colors.warning + "20" }]}>
+                <Ionicons name="time-outline" size={18} color={colors.warning} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.actionLabel, { color: colors.foreground }]}>Seller Application</Text>
+                <Text style={[styles.actionSub, { color: colors.warning }]}>Pending admin approval</Text>
+              </View>
+            </View>
           )}
 
           <Pressable
             style={[styles.actionRow, { borderBottomColor: colors.border }]}
             onPress={() => router.push("/(tabs)/orders")}
           >
-            <Ionicons name="receipt-outline" size={20} color={colors.foreground} />
+            <View style={[styles.actionIcon, { backgroundColor: colors.muted }]}>
+              <Ionicons name="receipt-outline" size={18} color={colors.foreground} />
+            </View>
             <Text style={[styles.actionLabel, { color: colors.foreground }]}>Order History</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
           </Pressable>
         </View>
 
+        {/* Sign out */}
         <Pressable
           style={[styles.logoutBtn, { backgroundColor: colors.destructive + "15", borderColor: colors.destructive + "40" }]}
           onPress={handleLogout}
@@ -117,7 +163,7 @@ export default function AccountScreen() {
           <Text style={[styles.logoutLabel, { color: colors.destructive }]}>Sign Out</Text>
         </Pressable>
 
-        <Text style={[styles.version, { color: colors.mutedForeground }]}>Bazaar v1.0</Text>
+        <Text style={[styles.version, { color: colors.mutedForeground }]}>Bazaar v1.0 · Made with love</Text>
       </ScrollView>
     </View>
   );
@@ -143,7 +189,9 @@ const styles = StyleSheet.create({
   infoLabel: { fontSize: 13, fontFamily: "Inter_400Regular", width: 50 },
   infoValue: { flex: 1, fontSize: 14, fontFamily: "Inter_500Medium", textAlign: "right" },
   actionRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, gap: 12 },
+  actionIcon: { width: 34, height: 34, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   actionLabel: { flex: 1, fontSize: 14, fontFamily: "Inter_500Medium" },
+  actionSub: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 },
   logoutBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", height: 52, borderRadius: 14, borderWidth: 1, gap: 8 },
   logoutLabel: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
   version: { textAlign: "center", fontSize: 12, fontFamily: "Inter_400Regular" },

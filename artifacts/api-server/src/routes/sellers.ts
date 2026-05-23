@@ -16,6 +16,27 @@ function formatSeller(s: typeof sellersTable.$inferSelect, u: typeof usersTable.
   };
 }
 
+// Admin: list all sellers
+router.get("/sellers", requireAuth, async (req, res): Promise<void> => {
+  if (req.user!.role !== "admin") {
+    res.status(403).json({ error: "Admin access required" });
+    return;
+  }
+  const sellers = await db.select({ s: sellersTable, u: usersTable })
+    .from(sellersTable)
+    .innerJoin(usersTable, eq(sellersTable.userId, usersTable.id))
+    .orderBy(desc(sellersTable.createdAt));
+
+  const result = await Promise.all(sellers.map(async ({ s, u }) => {
+    const [[{ count: tp }], [{ count: to }]] = await Promise.all([
+      db.select({ count: sql<number>`count(*)` }).from(productsTable).where(eq(productsTable.sellerId, s.id)),
+      db.select({ count: sql<number>`count(*)` }).from(ordersTable).where(eq(ordersTable.sellerId, s.id)),
+    ]);
+    return formatSeller(s, u, Number(tp), Number(to));
+  }));
+  res.json({ sellers: result });
+});
+
 router.get("/sellers/dashboard", requireAuth, async (req, res): Promise<void> => {
   const [seller] = await db.select().from(sellersTable).where(eq(sellersTable.userId, req.user!.userId));
   if (!seller) {
@@ -41,6 +62,7 @@ router.get("/sellers/dashboard", requireAuth, async (req, res): Promise<void> =>
   const [sellerUser] = await db.select().from(usersTable).where(eq(usersTable.id, seller.userId));
 
   res.json({
+    sellerId: seller.id,
     totalProducts: Number(totalProducts ?? 0),
     totalOrders: Number(totalOrders ?? 0),
     pendingOrders: Number(pendingOrders ?? 0),
@@ -194,7 +216,7 @@ router.put("/sellers/approve/:userId", requireAuth, async (req, res): Promise<vo
     res.status(404).json({ error: "Seller not found" });
     return;
   }
-  await db.update(usersTable).set({ sellerApproved: true }).where(eq(usersTable.id, targetUserId));
+  await db.update(usersTable).set({ sellerApproved: true, role: "seller" }).where(eq(usersTable.id, targetUserId));
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, updated.userId));
   res.json(formatSeller(updated, user!));
 });

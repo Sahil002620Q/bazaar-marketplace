@@ -52,6 +52,8 @@ function RootLayoutNav() {
       <Stack.Screen name="seller/index" options={{ headerShown: false, animation: "slide_from_right" }} />
       <Stack.Screen name="seller/add-product" options={{ headerShown: false, animation: "slide_from_right" }} />
       <Stack.Screen name="become-seller" options={{ headerShown: false, animation: "slide_from_right" }} />
+      <Stack.Screen name="order/[id]" options={{ headerShown: false, animation: "slide_from_right" }} />
+      <Stack.Screen name="admin/index" options={{ headerShown: false, animation: "slide_from_right" }} />
     </Stack>
   );
 }

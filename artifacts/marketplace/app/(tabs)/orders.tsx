@@ -42,7 +42,6 @@ export default function OrdersScreen() {
       const data = await res.json();
       setOrders(data.orders ?? []);
     } catch {
-      // ignore
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -104,15 +103,18 @@ export default function OrdersScreen() {
           scrollEnabled={!!filteredOrders.length}
           renderItem={({ item: order }) => (
             <Pressable
-              style={[styles.orderCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-              onPress={() => {}}
+              style={({ pressed }) => [styles.orderCard, { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.9 : 1 }]}
+              onPress={() => router.push(`/order/${order.id}`)}
             >
               <View style={styles.orderHeader}>
-                <View>
+                <View style={{ flex: 1 }}>
                   <Text style={[styles.orderId, { color: colors.primary }]}>{order.orderId}</Text>
                   <Text style={[styles.shopName, { color: colors.foreground }]}>{order.shopName}</Text>
                 </View>
-                <OrderStatusBadge status={order.status} />
+                <View style={styles.headerRight}>
+                  <OrderStatusBadge status={order.status} />
+                  <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} style={{ marginTop: 4 }} />
+                </View>
               </View>
 
               <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -133,7 +135,14 @@ export default function OrdersScreen() {
             <View style={[styles.centered, { marginTop: 60 }]}>
               <Ionicons name="receipt-outline" size={48} color={colors.mutedForeground} />
               <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No orders yet</Text>
-              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>Your orders will appear here</Text>
+              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                {tab === "all" ? "Place your first order!" : `No ${tab} orders`}
+              </Text>
+              {tab === "all" && (
+                <Pressable style={[styles.shopBtn, { backgroundColor: colors.primary }]} onPress={() => router.push("/(tabs)")}>
+                  <Text style={[{ color: colors.primaryForeground, fontFamily: "Inter_600SemiBold", fontSize: 14 }]}>Shop Now</Text>
+                </Pressable>
+              )}
             </View>
           }
         />
@@ -153,6 +162,7 @@ const styles = StyleSheet.create({
   list: { padding: 12, gap: 12 },
   orderCard: { borderRadius: 16, borderWidth: 1, padding: 14, gap: 8 },
   orderHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  headerRight: { alignItems: "flex-end", gap: 2 },
   orderId: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
   shopName: { fontSize: 16, fontFamily: "Inter_600SemiBold", marginTop: 2 },
   divider: { height: 1 },
@@ -162,6 +172,7 @@ const styles = StyleSheet.create({
   total: { fontSize: 16, fontFamily: "Inter_700Bold" },
   emptyTitle: { fontSize: 18, fontFamily: "Inter_600SemiBold" },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center" },
+  shopBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12, marginTop: 4 },
   signInBtn: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14 },
   signInLabel: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
 });
