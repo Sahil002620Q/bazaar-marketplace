@@ -17,6 +17,13 @@ interface Dashboard {
   recentOrders: Array<{ id: number; orderId: string; buyerName: string; totalPrice: number; status: string; createdAt: string; items: Array<{ productName: string; quantity: number }> }>;
 }
 
+interface SalesHistory {
+  totalSales: number;
+  totalOrders: number;
+  avgOrderValue: number;
+  mostSoldProduct: string;
+}
+
 interface Product {
   id: number; name: string; category: string; price: number; stock: number; images: string[]; unit: string;
 }
@@ -36,6 +43,7 @@ export default function SellerDashboardScreen() {
 
   const [tab, setTab] = useState<Tab>("dashboard");
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
+  const [salesHistory, setSalesHistory] = useState<SalesHistory | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<SellerOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,12 +61,14 @@ export default function SellerDashboardScreen() {
       setDashboard(dash);
 
       // Fetch products using sellerId from dashboard
-      const [prodRes, ordersRes] = await Promise.all([
+      const [prodRes, ordersRes, historyRes] = await Promise.all([
         fetch(`${API_BASE}/api/products?sellerId=${dash.sellerId}&limit=50`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_BASE}/api/sellers/orders?limit=30`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/sellers/sales-history`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
       if (prodRes.ok) { const d = await prodRes.json(); setProducts(d.products ?? []); }
       if (ordersRes.ok) { const d = await ordersRes.json(); setOrders(d.orders ?? []); }
+      if (historyRes.ok) { const d = await historyRes.json(); setSalesHistory(d); }
     } catch {
     } finally {
       setLoading(false);
@@ -134,6 +144,16 @@ export default function SellerDashboardScreen() {
     </View>
   );
 
+  const ExtraStatCard = ({ icon, label, value, color }: { icon: string; label: string; value: string; color: string }) => (
+    <View style={[styles.statCard, { width: "100%", backgroundColor: colors.card, borderColor: colors.border, flexDirection: "row", justifyContent: "flex-start", paddingHorizontal: 20 }]}>
+      <Ionicons name={icon as never} size={28} color={color} style={{ marginRight: 12 }} />
+      <View>
+        <Text style={[styles.statValue, { color: colors.foreground, fontSize: 18 }]}>{value}</Text>
+        <Text style={[styles.statLabel, { color: colors.mutedForeground, marginTop: 2 }]}>{label}</Text>
+      </View>
+    </View>
+  );
+
   const listData: (Product | SellerOrder | Dashboard["recentOrders"][0])[] =
     tab === "products" ? products :
     tab === "orders" ? orders :
@@ -190,6 +210,12 @@ export default function SellerDashboardScreen() {
                 <StatCard icon="time-outline" label="Pending" value={dashboard.pendingOrders.toString()} color={dashboard.pendingOrders > 0 ? colors.destructive : colors.success} />
                 <StatCard icon="cash-outline" label="Revenue" value={`₹${dashboard.totalRevenue.toFixed(0)}`} color={colors.success} />
               </View>
+              {salesHistory && (
+                <View style={[styles.statsGrid, { paddingTop: 0 }]}>
+                  <ExtraStatCard icon="star-outline" label="Most Sold Product" value={salesHistory.mostSoldProduct} color={colors.primary} />
+                  <ExtraStatCard icon="analytics-outline" label="Average Order Value" value={`₹${salesHistory.avgOrderValue.toFixed(0)}`} color={colors.success} />
+                </View>
+              )}
               {listData.length > 0 && (
                 <Text style={[styles.recentTitle, { color: colors.foreground }]}>Recent Orders</Text>
               )}

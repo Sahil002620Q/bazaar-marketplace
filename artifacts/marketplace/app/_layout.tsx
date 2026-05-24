@@ -18,6 +18,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, currentAuthToken, useAuth } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 
 // Set base URL for API calls — use http:// for localhost, https:// for production
 const _domain = process.env.EXPO_PUBLIC_DOMAIN ?? "localhost:8080";
@@ -82,11 +83,13 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <GestureHandlerRootView style={{ flex: 1 }}>
             <KeyboardProvider>
-              <AuthProvider>
-                <CartProvider>
-                  <RootLayoutNav />
-                </CartProvider>
-              </AuthProvider>
+              <ThemeProvider>
+                <AuthProvider>
+                  <CartProvider>
+                    <RootLayoutNav />
+                  </CartProvider>
+                </AuthProvider>
+              </ThemeProvider>
             </KeyboardProvider>
           </GestureHandlerRootView>
         </QueryClientProvider>

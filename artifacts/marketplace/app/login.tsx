@@ -37,7 +37,7 @@ function GoogleSignInButton({
 }) {
   const [request, response, promptAsync] = Google.useAuthRequest({
     webClientId: GOOGLE_CLIENT_ID!,
-    expoClientId: GOOGLE_CLIENT_ID!,
+    clientId: GOOGLE_CLIENT_ID!,
     selectAccount: true,
   });
   const [busy, setBusy] = useState(false);
@@ -45,7 +45,7 @@ function GoogleSignInButton({
   useEffect(() => {
     if (!response) return;
     if (response.type === "success") {
-      const token = response.authentication?.access_token;
+      const token = response.authentication?.accessToken;
       if (token) { setBusy(true); onSuccess(token); }
       else onError("Google sign-in failed — no token");
     } else if (response.type === "error") {

@@ -51,7 +51,7 @@ router.get("/products", async (req, res): Promise<void> => {
 
   const total = Number(countResult[0]?.count ?? 0);
   res.json({
-    products: products.map(p => ({ ...p, price: Number(p.price), createdAt: p.createdAt.toISOString() })),
+    products: products.map((p: any) => ({ ...p, price: Number(p.price), createdAt: p.createdAt.toISOString() })),
     total,
     page: pageNum,
     limit: limitNum,

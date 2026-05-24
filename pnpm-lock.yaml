@@ -218,10 +218,6 @@ importers:
       thread-stream:
         specifier: 3.1.0
         version: 3.1.0
-    optionalDependencies:
-      '@esbuild/win32-x64':
-        specifier: 0.27.3
-        version: 0.27.3
 
   artifacts/marketplace:
     dependencies:
@@ -1133,12 +1129,6 @@ packages:
     engines: {node: '>=18'}
     cpu: [x64]
     os: [linux]
-
-  '@esbuild/win32-x64@0.27.3':
-    resolution: {integrity: sha512-4uJGhsxuptu3OcpVAzli+/gWusVGwZZHTlS63hh++ehExkVT8SgiEf7/uC/PclrPPkLhZqGgCTjd0VWLo6xMqA==}
-    engines: {node: '>=18'}
-    cpu: [x64]
-    os: [win32]
 
   '@expo-google-fonts/inter@0.4.2':
     resolution: {integrity: sha512-syfiImMaDmq7cFi0of+waE2M4uSCyd16zgyWxdPOY7fN2VBmSLKEzkfbZgeOjJq61kSqPBNNtXjggiQiSD6gMQ==}
@@ -6371,9 +6361,6 @@ snapshots:
       '@types/hammerjs': 2.0.46
 
   '@esbuild/linux-x64@0.27.3':
-    optional: true
-
-  '@esbuild/win32-x64@0.27.3':
     optional: true
 
   '@expo-google-fonts/inter@0.4.2': {}

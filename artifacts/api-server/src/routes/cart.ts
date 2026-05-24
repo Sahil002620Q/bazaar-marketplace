@@ -32,7 +32,7 @@ async function buildCartResponse(cartId: number, userId: number) {
     .innerJoin(usersTable, eq(sellersTable.userId, usersTable.id))
     .where(eq(cartItemsTable.cartId, cartId));
 
-  const mappedItems = items.map(i => ({
+  const mappedItems = items.map((i: any) => ({
     id: i.id,
     productId: i.productId,
     productName: i.productName,
@@ -46,8 +46,8 @@ async function buildCartResponse(cartId: number, userId: number) {
     subtotal: Number(i.price) * i.quantity,
   }));
 
-  const total = mappedItems.reduce((sum, i) => sum + i.subtotal, 0);
-  return { id: cart.id, items: mappedItems, total, itemCount: mappedItems.reduce((sum, i) => sum + i.quantity, 0) };
+  const total = mappedItems.reduce((sum: any, i: any) => sum + i.subtotal, 0);
+  return { id: cart.id, items: mappedItems, total, itemCount: mappedItems.reduce((sum: any, i: any) => sum + i.quantity, 0) };
 }
 
 router.get("/cart", requireAuth, async (req, res): Promise<void> => {

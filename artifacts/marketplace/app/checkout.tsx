@@ -75,9 +75,9 @@ export default function CheckoutScreen() {
         const firstSeller = items[0];
         const sellerPhone = firstSeller?.sellerName ?? "";
         const msg = encodeURIComponent(
-          `Hello! I would like to place an order:\n\n` +
-          items.map(i => `• ${i.productName} ×${i.quantity} — ₹${(i.price * i.quantity).toFixed(0)}`).join("\n") +
-          `\n\nTotal: ₹${total.toFixed(0)}\n\nDelivery to:\n${deliveryAddress.street}, ${deliveryAddress.city}, ${deliveryAddress.state} - ${deliveryAddress.zipCode}\nName: ${name}\nPhone: ${phone}`
+          `Hello, I would like to place an order:\n\nItems:\n` +
+          items.map(i => `- ${i.productName} (Qty: ${i.quantity}) - ₹${(i.price * i.quantity).toFixed(0)}`).join("\n") +
+          `\n\nTotal: ₹${total.toFixed(0)}\n\nDelivery Address:\n${deliveryAddress.street}, ${deliveryAddress.city}, ${deliveryAddress.state} - ${deliveryAddress.zipCode}\n\nName: ${name}\nPhone: ${phone}`
         );
         const waPhone = sellerPhone.replace(/[^0-9+]/g, "");
         if (waPhone) {

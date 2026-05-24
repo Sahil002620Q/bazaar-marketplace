@@ -15,7 +15,7 @@ router.get("/users/profile", requireAuth, async (req, res): Promise<void> => {
   res.json({
     id: user.id, name: user.name, email: user.email, phone: user.phone,
     role: user.role, sellerApproved: user.sellerApproved,
-    addresses: addresses.map(a => ({ ...a, isDefault: a.isDefault })),
+    addresses: addresses.map((a: any) => ({ ...a, isDefault: a.isDefault })),
     createdAt: user.createdAt.toISOString(),
   });
 });

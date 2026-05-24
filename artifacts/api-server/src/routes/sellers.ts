@@ -27,7 +27,7 @@ router.get("/sellers", requireAuth, async (req, res): Promise<void> => {
     .innerJoin(usersTable, eq(sellersTable.userId, usersTable.id))
     .orderBy(desc(sellersTable.createdAt));
 
-  const result = await Promise.all(sellers.map(async ({ s, u }) => {
+  const result = await Promise.all(sellers.map(async ({ s, u }: any) => {
     const [[{ count: tp }], [{ count: to }]] = await Promise.all([
       db.select({ count: sql<number>`count(*)` }).from(productsTable).where(eq(productsTable.sellerId, s.id)),
       db.select({ count: sql<number>`count(*)` }).from(ordersTable).where(eq(ordersTable.sellerId, s.id)),
@@ -68,7 +68,7 @@ router.get("/sellers/dashboard", requireAuth, async (req, res): Promise<void> =>
     pendingOrders: Number(pendingOrders ?? 0),
     totalRevenue: Number(totalRevenue ?? 0),
     orderingMode: seller.orderingMode,
-    recentOrders: recentOrders.map(r => ({
+    recentOrders: recentOrders.map((r: any) => ({
       id: r.order.id, orderId: r.order.orderId, buyerId: r.order.buyerId, sellerId: r.order.sellerId,
       buyerName: r.buyerName, sellerName: sellerUser?.name ?? "", shopName: seller.shopName,
       items: r.order.items as never[], totalPrice: Number(r.order.totalPrice),
@@ -161,7 +161,7 @@ router.get("/sellers/orders", requireAuth, async (req, res): Promise<void> => {
   const [sellerUser] = await db.select().from(usersTable).where(eq(usersTable.id, seller.userId));
 
   res.json({
-    orders: orders.map(r => ({
+    orders: orders.map((r: any) => ({
       id: r.order.id, orderId: r.order.orderId, buyerId: r.order.buyerId, sellerId: r.order.sellerId,
       buyerName: r.buyerName, sellerName: sellerUser?.name ?? "", shopName: seller.shopName,
       items: r.order.items as never[], totalPrice: Number(r.order.totalPrice),
@@ -186,15 +186,32 @@ router.get("/sellers/sales-history", requireAuth, async (req, res): Promise<void
     .from(ordersTable).innerJoin(usersTable, eq(ordersTable.buyerId, usersTable.id))
     .where(eq(ordersTable.sellerId, seller.id)).orderBy(desc(ordersTable.createdAt)).limit(100);
 
-  const delivered = orders.filter(o => o.order.status === "delivered");
-  const totalSales = delivered.reduce((sum, o) => sum + Number(o.order.totalPrice), 0);
+  const delivered = orders.filter((o: any) => o.order.status === "delivered");
+  const totalSales = delivered.reduce((sum: any, o: any) => sum + Number(o.order.totalPrice), 0);
   const [sellerUser] = await db.select().from(usersTable).where(eq(usersTable.id, seller.userId));
+
+  const productCounts: Record<string, number> = {};
+  delivered.forEach((o: any) => {
+    const items = o.order.items as any[];
+    items.forEach(item => {
+      productCounts[item.name] = (productCounts[item.name] || 0) + item.quantity;
+    });
+  });
+  let mostSoldProduct = "None";
+  let maxCount = 0;
+  for (const [name, count] of Object.entries(productCounts)) {
+    if (count > maxCount) {
+      mostSoldProduct = name;
+      maxCount = count;
+    }
+  }
 
   res.json({
     totalSales,
     totalOrders: orders.length,
     avgOrderValue: delivered.length > 0 ? totalSales / delivered.length : 0,
-    orders: orders.map(r => ({
+    mostSoldProduct,
+    orders: orders.map((r: any) => ({
       id: r.order.id, orderId: r.order.orderId, buyerId: r.order.buyerId, sellerId: r.order.sellerId,
       buyerName: r.buyerName, sellerName: sellerUser?.name ?? "", shopName: seller.shopName,
       items: r.order.items as never[], totalPrice: Number(r.order.totalPrice),

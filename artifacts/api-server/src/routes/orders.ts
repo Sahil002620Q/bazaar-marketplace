@@ -111,7 +111,7 @@ router.get("/orders", requireAuth, async (req, res): Promise<void> => {
   const total = Number(countResult?.count ?? 0);
 
   res.json({
-    orders: orders.map(r => formatOrder(r.order, r.buyerName, r.sellerName, r.shopName)),
+    orders: orders.map((r: any) => formatOrder(r.order, r.buyerName, r.sellerName, r.shopName)),
     total,
     page: pageNum,
     totalPages: Math.ceil(total / limitNum),
