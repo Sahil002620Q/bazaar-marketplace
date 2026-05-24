@@ -144,6 +144,20 @@ export default function AccountScreen() {
 
           <Pressable
             style={[styles.actionRow, { borderBottomColor: colors.border }]}
+            onPress={() => router.push("/settings")}
+          >
+            <View style={[styles.actionIcon, { backgroundColor: colors.primary + "20" }]}>
+              <Ionicons name="color-palette-outline" size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.actionLabel, { color: colors.foreground }]}>Settings & Themes</Text>
+              <Text style={[styles.actionSub, { color: colors.mutedForeground }]}>Appearance and preferences</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
+          </Pressable>
+
+          <Pressable
+            style={[styles.actionRow, { borderBottomColor: colors.border }]}
             onPress={() => router.push("/(tabs)/orders")}
           >
             <View style={[styles.actionIcon, { backgroundColor: colors.muted }]}>

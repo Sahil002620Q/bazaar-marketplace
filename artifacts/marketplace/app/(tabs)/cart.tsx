@@ -6,6 +6,7 @@ import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCart } from "@/context/CartContext";
 import { useColors } from "@/hooks/useColors";
+import { GlassCard } from "@/components/GlassCard";
 
 export default function CartScreen() {
   const colors = useColors();
@@ -50,7 +51,7 @@ export default function CartScreen() {
         <>
           <ScrollView contentContainerStyle={[styles.list, { paddingBottom: bottomPad + 80 }]}>
             {items.map(item => (
-              <View key={item.productId} style={[styles.cartItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <GlassCard key={item.productId} padding={12} style={styles.cartItem}>
                 <View style={[styles.imageBox, { backgroundColor: colors.muted }]}>
                   {item.productImage ? (
                     <Image source={{ uri: item.productImage }} style={styles.image} resizeMode="cover" />
@@ -87,7 +88,7 @@ export default function CartScreen() {
                 <Pressable style={styles.removeBtn} onPress={() => removeItem(item.productId)}>
                   <Ionicons name="trash-outline" size={18} color={colors.destructive} />
                 </Pressable>
-              </View>
+              </GlassCard>
             ))}
           </ScrollView>
 

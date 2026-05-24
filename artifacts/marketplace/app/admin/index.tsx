@@ -143,6 +143,11 @@ export default function AdminPanelScreen() {
             <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>Manage your marketplace</Text>
           </View>
         </View>
+        {activeTab === "products" && (
+          <Pressable onPress={() => router.push("/seller/add-product")} style={[styles.addBtn, { backgroundColor: colors.primary }]}>
+            <Ionicons name="add" size={22} color={colors.primaryForeground} />
+          </Pressable>
+        )}
       </View>
 
       <View style={{ borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.card }}>
@@ -249,9 +254,10 @@ export default function AdminPanelScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   centered: { flex: 1, alignItems: "center", justifyContent: "center" },
-  header: { paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1 },
+  header: { paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
   backBtnSmall: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
+  addBtn: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   title: { fontSize: 20, fontFamily: "Inter_700Bold" },
   subtitle: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 },
   tabScroll: { flexGrow: 0 },

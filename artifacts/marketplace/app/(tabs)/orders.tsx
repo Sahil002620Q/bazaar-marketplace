@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { OrderStatusBadge } from "@/components/OrderStatusBadge";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
+import { GlassCard } from "@/components/GlassCard";
 
 interface OrderItem { productName: string; quantity: number; price: number; }
 interface Order {
@@ -103,32 +104,34 @@ export default function OrdersScreen() {
           scrollEnabled={!!filteredOrders.length}
           renderItem={({ item: order }) => (
             <Pressable
-              style={({ pressed }) => [styles.orderCard, { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.9 : 1 }]}
+              style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1, marginBottom: 12 }]}
               onPress={() => router.push(`/order/${order.id}`)}
             >
-              <View style={styles.orderHeader}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.orderId, { color: colors.primary }]}>{order.orderId}</Text>
-                  <Text style={[styles.shopName, { color: colors.foreground }]}>{order.shopName}</Text>
+              <GlassCard padding={14} style={styles.orderCard}>
+                <View style={styles.orderHeader}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.orderId, { color: colors.primary }]}>{order.orderId}</Text>
+                    <Text style={[styles.shopName, { color: colors.foreground }]}>{order.shopName}</Text>
+                  </View>
+                  <View style={styles.headerRight}>
+                    <OrderStatusBadge status={order.status} />
+                    <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} style={{ marginTop: 4 }} />
+                  </View>
                 </View>
-                <View style={styles.headerRight}>
-                  <OrderStatusBadge status={order.status} />
-                  <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} style={{ marginTop: 4 }} />
-                </View>
-              </View>
 
-              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-              <Text style={[styles.itemsText, { color: colors.mutedForeground }]} numberOfLines={2}>
-                {order.items.map(i => `${i.productName} ×${i.quantity}`).join(", ")}
-              </Text>
-
-              <View style={styles.orderFooter}>
-                <Text style={[styles.date, { color: colors.mutedForeground }]}>
-                  {new Date(order.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                <Text style={[styles.itemsText, { color: colors.mutedForeground }]} numberOfLines={2}>
+                  {order.items.map(i => `${i.productName} ×${i.quantity}`).join(", ")}
                 </Text>
-                <Text style={[styles.total, { color: colors.foreground }]}>₹{order.totalPrice.toFixed(0)}</Text>
-              </View>
+
+                <View style={styles.orderFooter}>
+                  <Text style={[styles.date, { color: colors.mutedForeground }]}>
+                    {new Date(order.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                  </Text>
+                  <Text style={[styles.total, { color: colors.foreground }]}>₹{order.totalPrice.toFixed(0)}</Text>
+                </View>
+              </GlassCard>
             </Pressable>
           )}
           ListEmptyComponent={

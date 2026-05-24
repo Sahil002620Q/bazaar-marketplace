@@ -82,8 +82,11 @@ router.get("/products/:id", async (req, res): Promise<void> => {
 });
 
 router.post("/products", requireAuth, requireSeller, async (req, res): Promise<void> => {
-  const [seller] = await db.select().from(sellersTable).where(eq(sellersTable.userId, req.user!.userId));
-  if (!seller || !seller.verified) {
+  let [seller] = await db.select().from(sellersTable).where(eq(sellersTable.userId, req.user!.userId));
+  if (req.user!.role === "admin" && !seller) {
+    [seller] = await db.insert(sellersTable).values({ userId: req.user!.userId, shopName: "Bazaar Official", phone: "000", address: "Admin HQ", orderingMode: "ecommerce", whatsappNumber: "", verified: true }).returning();
+  }
+  if (!seller || (!seller.verified && req.user!.role !== "admin")) {
     res.status(403).json({ error: "Seller not approved" });
     return;
   }

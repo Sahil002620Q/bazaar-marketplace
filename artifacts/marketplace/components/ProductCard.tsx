@@ -5,6 +5,7 @@ import React from "react";
 import { Image, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useColors } from "@/hooks/useColors";
 import { useCart } from "@/context/CartContext";
+import { GlassCard } from "./GlassCard";
 
 export interface ProductCardData {
   id: number;
@@ -58,49 +59,51 @@ export function ProductCard({ product }: Props) {
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.card, { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }]}
+      style={({ pressed }) => [{ flex: 1, margin: 4, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }]}
       onPress={() => router.push(`/product/${product.id}`)}
     >
-      <View style={[styles.imageContainer, { backgroundColor: colors.muted }]}>
-        {imageUri ? (
-          <Image source={{ uri: imageUri }} style={styles.image} resizeMode="cover" />
-        ) : (
-          <View style={[styles.imagePlaceholder, { backgroundColor: colors.muted }]}>
-            <Ionicons name="image-outline" size={32} color={colors.mutedForeground} />
-          </View>
-        )}
-        {isOutOfStock && (
-          <View style={[styles.outOfStockBadge, { backgroundColor: colors.destructive }]}>
-            <Text style={[styles.outOfStockText, { color: colors.destructiveForeground }]}>Out of Stock</Text>
-          </View>
-        )}
-      </View>
-
-      <View style={styles.content}>
-        <Text style={[styles.category, { color: colors.primary }]} numberOfLines={1}>
-          {CATEGORIES[product.category] ?? product.category}
-        </Text>
-        <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={2}>
-          {product.name}
-        </Text>
-        <Text style={[styles.seller, { color: colors.mutedForeground }]} numberOfLines={1}>
-          {product.shopName || product.sellerName}
-        </Text>
-
-        <View style={styles.footer}>
-          <Text style={[styles.price, { color: colors.primary }]}>
-            ₹{product.price.toFixed(0)}
-            <Text style={[styles.unit, { color: colors.mutedForeground }]}> /{product.unit}</Text>
-          </Text>
-          <Pressable
-            style={[styles.addButton, { backgroundColor: isOutOfStock ? colors.muted : colors.primary, opacity: isOutOfStock ? 0.5 : 1 }]}
-            onPress={handleAddToCart}
-            disabled={isOutOfStock}
-          >
-            <Ionicons name="add" size={18} color={colors.primaryForeground} />
-          </Pressable>
+      <GlassCard padding={0} style={styles.card}>
+        <View style={[styles.imageContainer, { backgroundColor: colors.muted }]}>
+          {imageUri ? (
+            <Image source={{ uri: imageUri }} style={styles.image} resizeMode="cover" />
+          ) : (
+            <View style={[styles.imagePlaceholder, { backgroundColor: colors.muted }]}>
+              <Ionicons name="image-outline" size={32} color={colors.mutedForeground} />
+            </View>
+          )}
+          {isOutOfStock && (
+            <View style={[styles.outOfStockBadge, { backgroundColor: colors.destructive }]}>
+              <Text style={[styles.outOfStockText, { color: colors.destructiveForeground }]}>Out of Stock</Text>
+            </View>
+          )}
         </View>
-      </View>
+
+        <View style={styles.content}>
+          <Text style={[styles.category, { color: colors.primary }]} numberOfLines={1}>
+            {CATEGORIES[product.category] ?? product.category}
+          </Text>
+          <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={2}>
+            {product.name}
+          </Text>
+          <Text style={[styles.seller, { color: colors.mutedForeground }]} numberOfLines={1}>
+            {product.shopName || product.sellerName}
+          </Text>
+
+          <View style={styles.footer}>
+            <Text style={[styles.price, { color: colors.primary }]}>
+              ₹{product.price.toFixed(0)}
+              <Text style={[styles.unit, { color: colors.mutedForeground }]}> /{product.unit}</Text>
+            </Text>
+            <Pressable
+              style={[styles.addButton, { backgroundColor: isOutOfStock ? colors.muted : colors.primary, opacity: isOutOfStock ? 0.5 : 1 }]}
+              onPress={handleAddToCart}
+              disabled={isOutOfStock}
+            >
+              <Ionicons name="add" size={18} color={colors.primaryForeground} />
+            </Pressable>
+          </View>
+        </View>
+      </GlassCard>
     </Pressable>
   );
 }

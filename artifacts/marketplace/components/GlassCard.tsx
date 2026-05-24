@@ -7,9 +7,10 @@ interface GlassCardProps {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   intensity?: number;
+  padding?: number;
 }
 
-export function GlassCard({ children, style, intensity = 15 }: GlassCardProps) {
+export function GlassCard({ children, style, intensity = 15, padding = 16 }: GlassCardProps) {
   const colors = useColors();
 
   return (
@@ -18,6 +19,7 @@ export function GlassCard({ children, style, intensity = 15 }: GlassCardProps) {
       <View style={[styles.content, { 
         backgroundColor: colors.card + "D9", // 85% opacity
         borderColor: colors.border + "33", // 20% opacity border
+        padding,
       }]}>
         {children}
       </View>
@@ -33,6 +35,5 @@ const styles = StyleSheet.create({
   content: {
     borderWidth: 1,
     borderRadius: 20,
-    padding: 16,
   },
 });
