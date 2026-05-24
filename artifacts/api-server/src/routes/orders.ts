@@ -9,7 +9,7 @@ function genOrderId() {
   return "ORD-" + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 4).toUpperCase();
 }
 
-function formatOrder(o: typeof ordersTable.$inferSelect, buyerName: string, sellerName: string, shopName: string) {
+function formatOrder(o: typeof ordersTable.$inferSelect, buyerName: string, sellerName: string, shopName: string, sellerWhatsapp?: string) {
   return {
     id: o.id,
     orderId: o.orderId,
@@ -18,6 +18,7 @@ function formatOrder(o: typeof ordersTable.$inferSelect, buyerName: string, sell
     buyerName,
     sellerName,
     shopName,
+    sellerWhatsapp,
     items: o.items as Array<{ productId: number; productName: string; quantity: number; price: number; subtotal: number; unit: string }>,
     totalPrice: Number(o.totalPrice),
     deliveryAddress: o.deliveryAddress as { name: string; street: string; city: string; state: string; zipCode: string; phone: string },
@@ -82,7 +83,7 @@ router.post("/orders", requireAuth, async (req, res): Promise<void> => {
     paymentStatus: "pending",
   }).returning();
 
-  res.status(201).json(formatOrder(order, buyer?.name ?? "", seller.u.name, seller.s.shopName));
+  res.status(201).json(formatOrder(order, buyer?.name ?? "", seller.u.name, seller.s.shopName, seller.s.whatsappNumber ?? ""));
 });
 
 router.get("/orders", requireAuth, async (req, res): Promise<void> => {

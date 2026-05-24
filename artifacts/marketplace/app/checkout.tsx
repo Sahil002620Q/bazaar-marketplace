@@ -52,6 +52,7 @@ export default function CheckoutScreen() {
     try {
       const deliveryAddress = { name: name.trim(), phone: phone.trim(), street: street.trim(), city: city.trim(), state: stateName.trim(), zipCode: zipCode.trim() };
 
+      const createdOrders = [];
       for (const sellerId of sellerIds) {
         const sellerItems = items.filter(i => i.sellerId === sellerId);
         const res = await fetch(`${API_BASE}/api/orders`, {
@@ -68,20 +69,30 @@ export default function CheckoutScreen() {
           const err = await res.json();
           throw new Error(err.message ?? "Failed to place order");
         }
+        const orderData = await res.json();
+        createdOrders.push({ ...orderData, sellerItems });
       }
 
-      if (mode === "whatsapp") {
-        // Find seller whatsapp from items (use sellerName as fallback — ideally fetch from API)
-        const firstSeller = items[0];
-        const sellerPhone = firstSeller?.sellerName ?? "";
-        const msg = encodeURIComponent(
-          `Hello, I would like to place an order:\n\nItems:\n` +
-          items.map(i => `- ${i.productName} (Qty: ${i.quantity}) - ₹${(i.price * i.quantity).toFixed(0)}`).join("\n") +
-          `\n\nTotal: ₹${total.toFixed(0)}\n\nDelivery Address:\n${deliveryAddress.street}, ${deliveryAddress.city}, ${deliveryAddress.state} - ${deliveryAddress.zipCode}\n\nName: ${name}\nPhone: ${phone}`
-        );
-        const waPhone = sellerPhone.replace(/[^0-9+]/g, "");
+      if (mode === "whatsapp" && createdOrders.length > 0) {
+        const firstOrder = createdOrders[0];
+        const waPhone = (firstOrder.sellerWhatsapp || "").replace(/[^0-9+]/g, "");
+        
+        const msg = `*New Order Request* 📦\n\n` +
+          `*Customer Details:*\n` +
+          `👤 Name: ${name}\n` +
+          `📞 Phone: ${phone}\n\n` +
+          `*Delivery Address:*\n` +
+          `📍 ${deliveryAddress.street}\n` +
+          `${deliveryAddress.city}, ${deliveryAddress.state} - ${deliveryAddress.zipCode}\n\n` +
+          `*Order Summary:*\n` +
+          firstOrder.sellerItems.map((i: any, index: number) => `${index + 1}. ${i.productName}\n   - Qty: ${i.quantity}\n   - Price: ₹${(i.price * i.quantity).toFixed(0)}`).join("\n") +
+          `\n\n*Total Amount:* ₹${firstOrder.totalPrice.toFixed(0)}\n\n` +
+          `Please confirm my order. Thank you!`;
+
         if (waPhone) {
-          Linking.openURL(`https://wa.me/${waPhone}?text=${msg}`).catch(() => {});
+          Linking.openURL(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`).catch(() => {});
+        } else {
+          Alert.alert("Notice", "Seller does not have a WhatsApp number registered. Your order is placed in the app.");
         }
       }
 
