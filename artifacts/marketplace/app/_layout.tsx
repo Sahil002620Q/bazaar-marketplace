@@ -19,8 +19,10 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, currentAuthToken, useAuth } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
 
-// Set base URL for API calls
-setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
+// Set base URL for API calls — use http:// for localhost, https:// for production
+const _domain = process.env.EXPO_PUBLIC_DOMAIN ?? "localhost:8080";
+const _protocol = _domain.startsWith("localhost") ? "http" : "https";
+setBaseUrl(`${_protocol}://${_domain}`);
 // Set auth token getter to use the module-level currentAuthToken variable
 setAuthTokenGetter(() => currentAuthToken);
 

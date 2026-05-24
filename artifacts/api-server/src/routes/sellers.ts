@@ -111,7 +111,9 @@ router.post("/sellers/profile", requireAuth, async (req, res): Promise<void> => 
     userId: req.user!.userId, shopName, phone, address, orderingMode,
     whatsappNumber, paymentMethods: paymentMethods ?? ["cod"],
   }).returning();
-  await db.update(usersTable).set({ role: "seller" }).where(eq(usersTable.id, req.user!.userId));
+  if (req.user!.role !== "admin") {
+    await db.update(usersTable).set({ role: "seller" }).where(eq(usersTable.id, req.user!.userId));
+  }
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, seller.userId));
   res.status(201).json(formatSeller(seller, user!));
 });
@@ -216,8 +218,12 @@ router.put("/sellers/approve/:userId", requireAuth, async (req, res): Promise<vo
     res.status(404).json({ error: "Seller not found" });
     return;
   }
-  await db.update(usersTable).set({ sellerApproved: true, role: "seller" }).where(eq(usersTable.id, targetUserId));
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, updated.userId));
+  if (user && user.role !== "admin") {
+    await db.update(usersTable).set({ sellerApproved: true, role: "seller" }).where(eq(usersTable.id, targetUserId));
+  } else {
+    await db.update(usersTable).set({ sellerApproved: true }).where(eq(usersTable.id, targetUserId));
+  }
   res.json(formatSeller(updated, user!));
 });
 

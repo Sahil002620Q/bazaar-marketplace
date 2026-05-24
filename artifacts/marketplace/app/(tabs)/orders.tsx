@@ -17,7 +17,7 @@ interface Order {
 type Tab = "all" | "active" | "completed";
 
 const ACTIVE_STATUSES = ["pending", "confirmed", "shipped"];
-const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+const API_BASE = (() => { const d = process.env.EXPO_PUBLIC_DOMAIN ?? "localhost:8080"; return `${d.startsWith("localhost") ? "http" : "https"}://${d}`; })();
 
 export default function OrdersScreen() {
   const colors = useColors();

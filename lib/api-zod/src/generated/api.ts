@@ -25,7 +25,8 @@ export const registerBodyRoleDefault = `buyer`;
 export const RegisterBody = zod.object({
   "name": zod.string().min(1),
   "email": zod.string().email(),
-  "phone": zod.string(),
+  "phone": zod.string().optional().default(""),
+  "password": zod.string().min(6),
   "role": zod.enum(['buyer', 'seller']).default(registerBodyRoleDefault)
 })
 
@@ -35,6 +36,7 @@ export const RegisterBody = zod.object({
  */
 export const LoginBody = zod.object({
   "email": zod.string().email(),
+  "password": zod.string().min(1),
   "phone": zod.string().optional()
 })
 

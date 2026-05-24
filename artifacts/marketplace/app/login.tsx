@@ -22,7 +22,7 @@ import { useColors } from "@/hooks/useColors";
 WebBrowser.maybeCompleteAuthSession();
 
 type Mode = "login" | "register";
-const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+const BASE_URL = (() => { const d = process.env.EXPO_PUBLIC_DOMAIN ?? "localhost:8080"; return `${d.startsWith("localhost") ? "http" : "https"}://${d}`; })();
 const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
 
 // ─── Isolated Google button component (hook only runs when this mounts) ───────
@@ -84,6 +84,8 @@ export default function LoginScreen() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -106,15 +108,16 @@ export default function LoginScreen() {
   const handleSubmit = async () => {
     setError("");
     if (!email.trim()) { setError("Email is required"); return; }
+    if (!password.trim()) { setError("Password is required"); return; }
+    if (mode === "register" && password.length < 6) { setError("Password must be at least 6 characters"); return; }
     if (mode === "register" && !name.trim()) { setError("Name is required"); return; }
-    if (mode === "register" && !phone.trim()) { setError("Phone is required"); return; }
     setLoading(true);
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
       const endpoint = mode === "register" ? "/api/auth/register" : "/api/auth/login";
       const body = mode === "register"
-        ? { name: name.trim(), email: email.trim().toLowerCase(), phone: phone.trim() }
-        : { email: email.trim().toLowerCase() };
+        ? { name: name.trim(), email: email.trim().toLowerCase(), phone: phone.trim(), password }
+        : { email: email.trim().toLowerCase(), password };
       const res = await fetch(`${BASE_URL}${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -209,11 +212,25 @@ export default function LoginScreen() {
                   <Ionicons name="call-outline" size={18} color={colors.mutedForeground} style={styles.inputIcon} />
                   <TextInput
                     style={[styles.input, { color: colors.foreground }]}
-                    placeholder="Phone number" placeholderTextColor={colors.mutedForeground}
+                    placeholder="Phone number (optional)" placeholderTextColor={colors.mutedForeground}
                     value={phone} onChangeText={setPhone} keyboardType="phone-pad"
                   />
                 </View>
               )}
+
+              <View style={[styles.inputContainer, { backgroundColor: colors.input, borderColor: colors.border }]}>
+                <Ionicons name="lock-closed-outline" size={18} color={colors.mutedForeground} style={styles.inputIcon} />
+                <TextInput
+                  style={[styles.input, { color: colors.foreground }]}
+                  placeholder={mode === "register" ? "Create password (min 6 chars)" : "Password"}
+                  placeholderTextColor={colors.mutedForeground}
+                  value={password} onChangeText={setPassword}
+                  secureTextEntry={!showPassword} autoCapitalize="none"
+                />
+                <Pressable onPress={() => setShowPassword(v => !v)} style={{ paddingLeft: 8 }}>
+                  <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={18} color={colors.mutedForeground} />
+                </Pressable>
+              </View>
 
               {error ? (
                 <View style={[styles.errorBox, { backgroundColor: colors.destructive + "20" }]}>
